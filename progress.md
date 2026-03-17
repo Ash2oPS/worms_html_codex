@@ -1,0 +1,197 @@
+Original prompt: "okay mets en place ce projet web avec les libs que tu me conseilles. je veux une architecture de fichier et de classes solide, professionnelle, plutot drata driven friendly, pas de classe monolithique, pour qu'on puisse bien scale le projet. Fais le etre vraiment tres ressemblant a ce que tu connais de worms armageddon" puis "Non non pardon attends stop je veux pas du tout phaser, propose moi mieux" puis "alors mets tout ca en place de maniere propre".
+
+- 2026-03-16: Switched dependencies from Phaser to PixiJS + Rapier2D.
+- 2026-03-16: Started rewriting the Vite boilerplate toward a modular Worms-like architecture.
+- 2026-03-16: Added domain/core/data layers with JSON-driven rules, teams, and weapons.
+- 2026-03-16: Implemented engine services (terrain, physics, input, turns, wind, projectile, explosion, worm movement).
+- 2026-03-16: Added rendering modules and game bootstrap hooks (`render_game_to_text`, `advanceTime`).
+- 2026-03-16: Fixed projectile impact logic so bazooka shots resolve into explosions/craters and turn progression.
+- 2026-03-16: Validated with `npm run build` and Playwright client run (`output/web-game-long-2`), no console errors.
+- 2026-03-16: Verified static launch using `npx serve dist -s` (HTTP 200) and added `serve`/`serve:build` scripts.
+- 2026-03-16: Added `serve.json` so plain `npx serve` serves `dist` (SPA rewrite), fixing `/src/main.ts` MIME/module loading issue.
+- 2026-03-16: Fixed worm locomotion (velocity-driven ground movement + reliable jump velocity) and improved spawn spacing to avoid initial body blocking.
+- 2026-03-16: Re-tested movement with Playwright (`output/web-game-move-fix-2`), active worm moved from x=563.52 to x=611.26 in same turn.
+- 2026-03-16: Replaced TAB weapon cycling with a grid weapon menu (open/close, cursor navigation, confirm/cancel) and dedicated overlay renderer.
+- 2026-03-16: Validated weapon menu with Playwright (`output/web-game-menu-open`, `output/web-game-menu-select`): menu opens in-grid and selected weapon applies.
+- 2026-03-16: Added mouse selection in weapon grid (click case to equip, click outside to close) via canvas pointer mapping + menu hit testing.
+- 2026-03-16: Validated mouse selection with Playwright (`output/web-game-menu-mouse`): click picked grenade and closed menu.
+- TODO: Add rope/jetpack mobility, extra weapons, and dedicated server-authoritative Colyseus multiplayer loop.
+- 2026-03-16: Refactored turn sequencing to alternate by team in round-robin order (supports 2+ teams) with per-team alive-worm rotation, avoiding same-team streaks while multiple teams are alive.
+- 2026-03-16: Validated turn-order refactor with npm run build (TypeScript + Vite successful).
+- 2026-03-16: Added per-worm name labels above health bars in WormRenderer via reusable Pixi Text labels and switched BattleRenderer to mount wormRenderer.container.
+- 2026-03-16: Re-validated with `npm run build` and Playwright client capture (`output/web-game-name-label/shot-0.png`, `state-0.json`); names render above each worm health bar.
+- 2026-03-16: Switched worm body rendering from flat circles to per-worm sprites using /assets/worms/worms_sprite_00.png while preserving HP/name/aim overlays.
+- 2026-03-16: Updated layout for true fullscreen gameplay by removing `.game-shell` max viewport constraints and forcing canvas CSS sizing to fill the window.
+- 2026-03-16: Re-validated fullscreen rendering with production build + browser capture (`output/fullscreen-check/page-1.png`); app/shell/canvas all match viewport size.
+- 2026-03-16: Refactored terrain generation into modular pipeline modules (`midpoint fill`, `wave blend`, `rolling noise`, `smoothing`, `clamp`) under `src/engine/terrain/generation/` and wired `HeightMapTerrain` to this generator.
+- 2026-03-16: Extended terrain config typing with optional generation overrides (waves/noise/smoothing) and added those knobs in `src/data/rules.json` for data-driven tuning.
+- 2026-03-16: Added runtime seed randomization on load in `loadGameConfig` (`randomizeSeedOnLoad`, default true) via new `createRuntimeSeed`.
+- 2026-03-16: Validated with `npm run build` and two Playwright loads (`output/terrain-random-a`, `output/terrain-random-b`); screenshots and spawn positions differ, confirming terrain randomization between loads.
+- 2026-03-16: Upgraded terrain representation from single heightmap fill to material-cell terrain with multi-layer rendering support (topsoil/dirt/rock/bedrock), plus versioned redraw caching in TerrainRenderer.
+- 2026-03-16: Added modular terrain feature generation (`TerrainFeatureGenerator`) with mountain lifts, floating plateaus, cave carving, tunnel carving, and layered material assignment.
+- 2026-03-16: Updated terrain config schema and defaults to expose richer procedural knobs (`generation.features`, `generation.layers`) and increased terrain variance in `rules.json`.
+- 2026-03-16: Rebuilt terrain physics colliders from merged solid-cell rectangles to support holes/arches/multi-level platforms; added `getGroundYBelow` and updated worm grounding logic to avoid false grounding under overhangs.
+- 2026-03-16: Validated refactor with `npm run build` and Playwright captures:
+- `output/terrain-wild/shot-0.png`: visible arches, tunnels, floating layers, mixed materials.
+- `output/terrain-wild-reload-a/shot-0.png` vs `output/terrain-wild-reload-b/shot-0.png`: distinct terrain layouts per reload.
+- `output/terrain-move-check/shot-0.png` and `state-0.json`: gameplay loop still runs (shot/explosion/terrain interaction), no console errors.
+- 2026-03-16: Added marching-squares extraction module (`src/engine/terrain/marchingSquares.ts`) to derive boundary segments from voxelized terrain.
+- 2026-03-16: Switched terrain physics generation to marching-squares boundary segment colliders (`ColliderDesc.segment`) in `HeightMapTerrain.rebuildColliders`, replacing chunk-box colliders for smoother contact along irregular shapes.
+- 2026-03-16: Updated `TerrainRenderer` to draw marching-squares boundary lines on top of layered fill, with line-style reset fix to prevent per-row stroke artifacts after terrain updates.
+- 2026-03-16: Re-validated with `npm run build` and Playwright:
+- `output/terrain-msq-idle/shot-0.png` (stable initial render, no console errors),
+- `output/terrain-msq-v4/shot-0.png` + `shot-1.png` (post-shot terrain update remains stable),
+- `output/terrain-msq-reload-a/shot-0.png` vs `output/terrain-msq-reload-b/shot-0.png` (randomized map on reload still active).
+- 2026-03-16: Added smooth camera controller (CameraController) with interpolated pan/zoom; gameplay world now renders through a camera layer while HUD/menu remain screen-space.
+- 2026-03-16: Camera behavior now zooms onto the active worm during aiming (turn start) and smoothly zooms back to full-field outside aiming phases.
+- 2026-03-16: Hardened worm sprite rendering to skip scaling until texture dimensions are available, preventing first-frame `texture.orig` runtime crashes.
+- 2026-03-16: Validated with `npm run build` and Playwright captures (`output/web-game-camera-start-3`, `output/web-game-camera-turn-switch-3`) showing turn-based camera focus without console/page errors.
+- 2026-03-16: Bound worm visuals to /assets/worms/worms_sprite_00.png in WormRenderer (sprite-per-worm with facing flip), keeping HP bars, name labels, aim line, and team/active outlines.
+- 2026-03-16: Validated sprite integration with npm run build and Playwright capture output/web-game-worm-sprite-3 (shot-0.png + state-0.json, no errors file generated).
+- 2026-03-16: Fixed worm sprite visibility by preloading /assets/worms/worms_sprite_00.png with Pixi Assets at bootstrap and switching WormRenderer to deterministic 32px-base scaling (no runtime texture-orig gating).
+- 2026-03-16: Removed circular body fallback visuals; worms now render as anchored sprites with nearest-neighbor scaling and team/active foot rings only.
+- 2026-03-16: Re-validated with Playwright capture output/web-game-worm-sprite-7 (sprites clearly visible, no errors file).
+- 2026-03-16: Improved jump reliability on procedural terrain in `WormPhysicsSystem` by replacing single-point grounding with multi-point foot probes + near-ground tolerance.
+- 2026-03-16: Added coyote time (short post-edge grace) and jump buffering (short pre-landing grace) to reduce missed jumps when ground contact flickers frame-to-frame.
+- 2026-03-16: Validated physics patch with `npm run build` (TypeScript + Vite OK); skipped Playwright run for this non-visual/basic gameplay fix per project testing rule.
+- 2026-03-16: Grounding now also treats dynamic support below the worm as floor (Rapier downward ray probes with self-body exclusion), so standing on top of another worm counts as grounded.
+- 2026-03-16: Filtered support hits by upward-facing contact normal to avoid counting lateral brushes as grounded.
+- 2026-03-16: Re-validated with `npm run build`; no Playwright run for this targeted physics tweak (non-visual scope).
+- 2026-03-16: Prevented player-driven worm pushing by locking horizontal translation on non-active worms during `aiming`; only the current worm can move in X.
+- 2026-03-16: Added per-worm horizontal lock state in `WormPhysicsSystem` and wired lock updates each simulation step from `BattleGame`.
+- 2026-03-16: Re-validated with `npm run build`; skipped Playwright for this focused non-visual physics behavior change.
+- 2026-03-16: Airborne movement lock for active worm: horizontal velocity is forced to zero while not grounded and cleared on jump trigger to prevent forward drift during jump.
+- 2026-03-16: Airborne shooting lock: firing now requires `activeWorm.isGrounded` in aiming phase.
+- 2026-03-16: Re-validated with `npm run build`; Playwright skipped for this basic gameplay rule update (non-visual scope).
+- 2026-03-16: Tuned jump traversal to move forward more: added `physics.jumpForwardSpeed` (data-driven) and applied forward horizontal impulse at jump start using worm facing.
+- 2026-03-16: Kept airborne controls disabled while preserving jump momentum (`linvel.x`) in air, so jump advances without mid-air steering.
+- 2026-03-16: Re-validated with `npm run build`; no Playwright for this focused gameplay tuning pass.
+- 2026-03-16: Improved explosion knockback in ExplosionSystem.pushWorms by checking blast overlap against worm body edge (dist - worm.radius), adding a scalable upward bias, and enforcing a minimum impulse falloff so worms inside the blast radius are always physically ejected.
+- 2026-03-16: Re-validated with `npm run build` and focused Playwright captures (`output/explosion-eject-check`, `output/explosion-eject-close-check`, `output/explosion-eject-grenade-check`, `output/explosion-eject-grenade-mid-check`); blast interactions now consistently apply damage + knockback when worms are within explosion radius.
+- 2026-03-16: Increased explosion ejection strength significantly in ExplosionSystem.pushWorms (x3.15 base impulse, stronger minimum falloff, and additional vertical launch impulse) so worms in blast radius are launched much harder.
+- 2026-03-16: Validated with npm run build (TypeScript + Vite successful); skipped Playwright for this direct numeric physics tuning per project rule unless deeper visual investigation is needed.
+- 2026-03-16: Reduced worm sprite size (radius*2.4) and removed ground shadow/foot ring overlays under worms; kept names/HP/aim rendering.
+- 2026-03-16: Visual check with Playwright capture output/web-game-worm-sprite-8 confirms smaller sprites and no per-worm ground marker.
+- 2026-03-16: Added floating damage popups for explosion damage: red `-N` text now spawns above hit worms, rises over time, and fades out before cleanup.
+- 2026-03-16: Extended `MatchState` with transient `damageTexts` visuals and wired lifecycle updates in `ExplosionSystem.updateVisuals`.
+- 2026-03-16: Added `DamageTextRenderer` and mounted it in `BattleRenderer` world layer so damage numbers render above combat action.
+- 2026-03-16: Validated with `npm run build` and Playwright capture run `output/damage-popup-hunt-self`; screenshot `shot-14.png` clearly shows visible red damage text (`-32`) above a damaged worm.
+- 2026-03-16: Added worm death-chain explosions in ExplosionSystem: when a worm reaches 0 HP, it now dies through a centralized handler that immediately triggers a death explosion at its position (damage + knockback + crater + visual FX).
+- 2026-03-16: Extended WormPhysicsSystem.syncWormTransforms to return worms killed by falling out of bounds; BattleGame now triggers the same death explosion path for those deaths and plays explosion SFX.
+- 2026-03-16: Validated with npm run build; skipped Playwright for this focused gameplay logic change per project rule (no complex visual/UI modifications).
+- 2026-03-16: Aim indicator now originates from worm hand (shoulder-to-hand arm segment + hand-origin aim line) instead of center-point aiming in WormRenderer.
+- 2026-03-16: Validated hand-based aiming visuals with Playwright capture output/web-game-worm-aim-hand (no errors file).
+- 2026-03-16: Replaced procedural hand marker with imported asset /assets/worms/worms_hand_sprite_00.png for active worm aiming origin.
+- 2026-03-16: Added bootstrap preload for worms hand sprite asset and validated with no-fire Playwright capture output/web-game-worm-hand-sprite-2 (no errors file).
+- 2026-03-16: Refined marching-squares terrain rendering to draw per-material loop fills (topsoil/dirt/rock/bedrock) with hierarchy-aware hole cutting for smoother layered visuals.
+- 2026-03-16: Added material-specific marching caches in HeightMapTerrain (getMaterialMarchingSegments / getMaterialMarchingLoops) and tuned min loop-area thresholds to remove tiny visual artifacts.
+- 2026-03-16: Tuned terrain visual palette/contours and kept random map generation with richer material separation; adjusted terrain config (columnWidth: 6, layers deeper) for finer shapes.
+- 2026-03-16: Validated with 
+pm run build and Playwright capture (output/terrain-msq-pretty-2/shot-0.png, shot-1.png), no console/page errors file generated.
+- 2026-03-16: Added team controller mode (`human` | `ai`) to config/state, wired into MatchFactory, and set both default teams (`red`, `blue`) to `controller: "ai"` in `src/data/teams.json`.
+- 2026-03-16: Implemented `WormAiController` (`src/engine/ai/WormAiController.ts`) with nearest-enemy targeting, ballistic-ish aim/power solve, move/reposition logic, stuck detection + jump recovery, and auto-fire gating by alignment/turn urgency.
+- 2026-03-16: Integrated AI input resolution into `BattleGame` (team-based input source selection) and exposed active team controller in `render_game_to_text` turn snapshot for debugging.
+- 2026-03-16: Updated HUD to show `Controller: AI` when the active worm is AI-controlled (instead of keyboard control hints).
+- 2026-03-16: Validated with `npm run build` and Playwright skill client captures:
+- `output/ai-vs-ai-check/shot-5.png` + `state-5.json` (both teams advancing turns autonomously, AI controller visible in HUD/state).
+- `output/ai-vs-ai-long/shot-11.png` + `state-11.json` (extended autonomous run to turn 22 with no console errors file).
+- TODO: Add difficulty tiers (aggressive/defensive/accurate), weapon selection heuristics (grenade vs bazooka), and optional per-team AI personality profiles.
+- 2026-03-16: Updated aim visuals per request: hand sprite moved to worm center, removed all aim lines, and added bazooka sprite (/assets/weapons/bazooka_sprite_00.png) with same rotation as hand.
+- 2026-03-16: Layering adjusted to worm->bazooka->hand (bazooka rendered between worm and hand), plus bazooka asset preloaded in bootstrap.
+- 2026-03-16: Validated with Playwright no-input capture output/web-game-worm-hand-bazooka-3 (phase aiming, no errors file).
+- 2026-03-16: Improved terrain visuals + physics stability pass: added marching-loop simplification (simplifyClosedLoop) to reduce jagged collider edges and rebuilt terrain physics from smoothed+simplified loop segments (getPhysicsSegments).
+- 2026-03-16: Added richer terrain renderer treatment (material texture overlays, top-soil shadowing, top-facing grass accents) while keeping marching-squares material fill as the base.
+- 2026-03-16: Added world material sampling API (getMaterialAtWorld) for renderer-driven procedural texturing.
+- 2026-03-16: Added terrain generation cleanup modules to improve functional playability (cleanupLooseFragments, illMicroPockets) and tuned feature density in ules.json (fewer fragmented islands, stronger/more readable landmasses).
+- 2026-03-16: Tuned topsoil/dirt loop thresholds and top-surface-only highlighting to avoid contour artifacts and improve layer readability.
+- 2026-03-16: Validation runs completed with 
+pm run build + Playwright captures (output/terrain-msq-beautify-idle, output/terrain-msq-beautify-physics, output/terrain-msq-beautify-final6-idle, output/terrain-msq-beautify-final6-physics), no console/page errors files generated.
+- 2026-03-17: Added global water hazard config (`rules.water.levelY`) and wired it through `RulesConfig`.
+- 2026-03-17: Implemented instant worm death on water contact in `WormPhysicsSystem.syncWormTransforms` (`worm.position.y + worm.radius >= waterLevelY`) while keeping out-of-bounds death handling.
+- 2026-03-17: Added visible water rendering in `BackgroundRenderer` (full-width fill + highlighted surface line) and passed water level via `BattleRenderer`/`BattleGame`.
+- 2026-03-17: Extended `render_game_to_text` payload with `hazards.waterLevelY` for deterministic verification in automation snapshots.
+- 2026-03-17: Validated with `npm run build` (success).
+- 2026-03-17: Ran Playwright skill client for gameplay hazard verification (`output/water-hazard-check`): final state (`state-7.json`) shows multiple worms dead near waterline with `hazards.waterLevelY: 760`; no `errors-*.json` generated.
+- 2026-03-17: Ran focused visual Playwright capture (`output/water-visual-check/shot-0.png`) to confirm clearly visible global water level.
+- 2026-03-17: Fixed startup terrain-visibility instability: renderer now applies a smooth global marching-loops base fill (GLOBAL_BASE_FILL) and uses run-based fill only as a hard fallback when loop extraction is empty.
+- 2026-03-17: Removed fragile Graphics.cut() hole path usage and switched hole carving to guarded eginHole/endHole with defensive fallback to prevent runtime crash (TypeError: ... setting 'holes') on edge-case loop topology.
+- 2026-03-17: Tightened top-surface highlight filtering (|midY - groundY| <= 12) to reduce internal green contour artifacts on non-surface loop segments.
+- 2026-03-17: Revalidated startup rendering reliability with repeated cold-load Playwright runs (output/terrain-start-final2-a..d), all with visible terrain and no errors files.
+- 2026-03-16: Added AI-vs-AI testing harness `output/ai_batch_eval.mjs` to run many autonomous matches headless and report issue histograms (`no_damage_for_181s`, finish rate, winner, HP/alive summaries).
+- 2026-03-16: Fixed snapshot serialization bug in `BattleGame.toTextSnapshot`: non-finite `turnTimeLeftMs` now serializes as `-1` (instead of JSON `null`).
+- 2026-03-16: Improved combat AI (`WormAiController`) across multiple passes:
+- More aggressive approach distances (especially low enemy counts), less unnecessary retreat, and blocked-line reposition nudges.
+- Deterministic per-turn aim/power jitter to avoid repeating identical miss trajectories.
+- Stalemate-pressure mode based on elapsed no-damage time, increasing aggression and shot cadence.
+- 2026-03-16: Prevented post-match winner inconsistencies by stopping physics/gameplay simulation once `match.phase === "match_over"` (while still updating VFX lifetimes).
+- 2026-03-16: Multi-pass validation logs captured:
+- `output/ai-batch-before.log` (baseline: 6/8 unfinished, null timer issue present),
+- `output/ai-batch-after-pass2.log`, `output/ai-batch-after-pass3.log`, `output/ai-batch-after-pass4.log`,
+- `output/ai-batch-after-pass4-16games.log` (11/16 finished),
+- `output/ai-batch-after-pass5-12games.log` (10/12 finished, only residual issue: occasional long no-damage stalemate).
+- 2026-03-16: Final visual validation with Playwright client in `output/ai-vs-ai-final` (`shot-0.png`..`shot-5.png`, states, no errors file).
+- TODO: Residual edge-case remains on some procedural maps where both teams can enter long no-damage cycles; consider adding explicit sudden-death rule or hazard escalation after prolonged stalemate if 100% completion rate is required.
+- 2026-03-17: Reworked gameplay-first terrain guarantee in `TerrainFeatureGenerator.ensurePlayablePlatforms` with validated shelf insertion:
+- Added deterministic top-surface shelf carving (air clearance up to sky over each shelf column) so generated platforms are actually counted/playable at load.
+- Added disjoint placement bands + retries, then deterministic fallback shelves when needed to enforce minimum practical platform count.
+- 2026-03-17: Synced runtime counter defaults with terrain generation rules in `HeightMapTerrain.getPlayablePlatformCount` (uses config values for min width/flat tolerance/headroom).
+- 2026-03-17: Upgraded terrain faux normal-map rendering in `TerrainRenderer`:
+- Denser fine-grain material texture sampling (smaller radii, tighter spacing) to reduce chunky dot artifacts.
+- Stronger relief shading using depth-aware highlights/shadows + oriented micro-stroke passes for more organic rock/dirt surface detail.
+- 2026-03-17: Validation:
+- `npm run build` successful.
+- Playwright skill client cold-load captures: `output/terrain-shader-gp-v2-a`..`f` (no `errors-*.json`).
+- `playablePlatformCount` results across those six randomized loads: `3, 3, 3, 2, 3, 2` (now consistently within requested 2–3 range at load).
+- Additional gameplay progression check `output/terrain-shader-gp-v2-physics` (`state-0..3.json`) remains stable with `playablePlatformCount=3` throughout sampled turns and no errors file.
+- 2026-03-17: Terrain destruction/physics optimization pass to reduce freeze spikes on crater updates:
+- Added terrain mutation batching API in `HeightMapTerrain` (`beginMutationBatch` / `endMutationBatch`) and wired `ExplosionSystem` to batch projectile/death explosion chains, so terrain rebuild is no longer repeated for each sub-explosion in a chain.
+- Replaced global collider rebuild on each carve with chunked incremental collider rebuild:
+- Terrain now tracks dirty chunk indices from the crater-affected columns and rebuilds only impacted chunk colliders (`rebuildDirtyChunkColliders` / `rebuildChunkColliders`) instead of the full map.
+- Added partial terrain layer/surface refresh path (`TerrainFeatureGenerator.refreshSurfaceAndLayersInColumnRange`) and used it during crater commits to avoid full-grid re-layering after every impact.
+- 2026-03-17: Validation for destruction optimization:
+- `npm run build` successful.
+- Playwright stress run `output/terrain-destruction-opti-v1` (6 long iterations, multiple turn transitions/destructions) completed with no `errors-*.json`.
+- Visual check (`shot-0.png` vs `shot-5.png`) confirms terrain updates/destruction remain visible and stable across turns.
+- 2026-03-17: Reduced worm visual size in `WormRenderer`:
+- Added `WORM_VISUAL_DIAMETER_FACTOR = 2.0` (was effectively 2.4x radius multiplier) for smaller on-map worms.
+- Tightened HP bar width to `worm.radius * 2.05` to keep proportions coherent with smaller sprite scale.
+- Validation: `npm run build` successful and Playwright capture `output/worm-size-smaller-v1-game/shot-0.png` confirms smaller worms in combat view (no errors file generated).
+- 2026-03-17: Added pre-combat worm-name setup modal (`src/app/WormNameSetupModal.ts`) shown on boot with team sections and default worm names pre-filled.
+- 2026-03-17: Boot flow now waits for modal validation before creating `BattleGame` (`openWormNameSetupModal(shell, config.teams)`), so combat starts only after user confirmation.
+- 2026-03-17: `loadGameConfig` now deep-clones teams/weapons (`structuredClone`) so pre-combat name edits mutate only runtime config, not imported JSON module state.
+- 2026-03-17: Added full-screen modal styling in `global.css` (overlay, team-colored sections, form controls, start button).
+- 2026-03-17: Validated with `npm run build` and Playwright captures:
+- `output/modal-name-setup-idle/shot-0.png` (modal visible before validation, no state snapshot generated),
+- `output/modal-name-setup-start/shot-0.png` + `state-0.json` (after submit, combat simulation starts and state snapshot is available).
+- 2026-03-17: Extended pre-combat setup modal to include per-team controller selection (`Joueur` or `IA`) via team-level select controls.
+- 2026-03-17: On modal submit, selected controller values are written back to runtime team config (`team.controller`) before match creation.
+- 2026-03-17: Added controller-select styles (team header row + labeled select) to keep modal readable/responsive.
+- 2026-03-17: Validated with `npm run build`, modal visual capture `output/modal-controller-choice-idle/shot-0.png`, and functional browser check `output/modal-controller-choice-start/state-0.json` where `turn.currentTeamController` is `human` after selecting red team as player.
+- 2026-03-17: Updated `WormRenderer` so each worm name label and HP bar are tinted with that worm team color (`worm.teamColor`), with a safe fallback color when parsing fails.
+- 2026-03-17: Validated with `npm run build`; Playwright intentionally skipped for this basic visual color pass per project testing rule.
+- 2026-03-17: Added hold-to-charge firing flow for human-controlled worms in `BattleGame` (press/hold SPACE to charge, release to fire, auto-fire at full charge after 2000ms).
+- 2026-03-17: Introduced fire hold/release input flags in `InputMapper` (`fireHeld`, `fireReleased`) and wired AI `InputFrame` defaults accordingly.
+- 2026-03-17: Charge updates only projectile launch power (distance/speed), leaving damage logic unchanged.
+- 2026-03-17: Updated HUD controls hint text to mention hold-to-charge behavior.
+- 2026-03-17: Validated with `npm run build` (success); Playwright intentionally skipped for this focused non-visual gameplay/input change per project testing rule.
+- 2026-03-17: Added slope-aware worm sprite orientation driven by averaged support normals sampled with multi-raycasts across the worm body.
+- 2026-03-17: Extended `WormState` with `groundNormal` and `groundAngleRad`, initialized in `MatchFactory`, and updated each physics sync step in `WormPhysicsSystem`.
+- 2026-03-17: Implemented weighted support-normal sampling (`sampleGroundNormal`) from a grid of downward rays, with normal-orientation correction, smoothing, and tilt clamp before applying sprite rotation.
+- 2026-03-17: Wired `WormRenderer` to rotate worm sprites using `worm.groundAngleRad`.
+- 2026-03-17: Validation: `npm run build` successful; visual Playwright verification run `output/worm-ground-tilt-check-2` (shots + states, no `errors-*.json`).
+- 2026-03-17: Visual confirmation examples: `output/worm-ground-tilt-check-2/shot-3.png` and `shot-5.png` show worms tilted to match local ground slope.
+- 2026-03-17: Added new jump input mode `backJumpPressed` in `InputFrame` and `InputMapper` double-press detection (`W`/`ArrowUp` within 280ms).
+- 2026-03-17: Extended `PhysicsConfig` with optional `backJumpSpeed` and `backJumpImpulse`; configured defaults in `src/data/rules.json` (`96`, `390`).
+- 2026-03-17: Updated `WormPhysicsSystem.applyMovement` to support back-jump buffering and boosted vertical impulse with opposite horizontal direction.
+- 2026-03-17: Added early-air conversion window (`BACK_JUMP_CONVERSION_FRAMES`) so second tap right after a normal jump converts trajectory into the higher backward jump.
+- 2026-03-17: Integrated new input into `BattleGame` movement call and updated HUD control hint (`W+W back-jump`).
+- 2026-03-17: Updated AI behavior to use back-jump on stuck/high obstacle cases (turn-around then `backJumpPressed`).
+- 2026-03-17: Added debug fields in text snapshot worms (`facing`, `grounded`) for movement diagnostics.
+- 2026-03-17: Validation runs:
+- Manual human-vs-AI probe confirms behavior (`output/double-jump-manual-probe.log`):
+- normal jump: `dx=+39.23`, `dy=-51.53` (forward, lower),
+- double tap jump: `dx=-14.93`, `dy=-89.43` (backward, higher).
+- AI probe confirms in-match AI usage (`output/backjump-probe.log`): `220` back-jump-like events over `414` jump starts across `6` games.
+- Visual captures saved: `output/double-jump-captures/normal-jump.png`, `output/double-jump-captures/double-jump.png`, plus AI run `output/backjump-ai-run/shot-*.png` (no errors file).
+- 2026-03-17: Updated `output/ai_batch_eval.mjs` to auto-start combat by clicking `.name-setup__submit` when roster modal is present, preserving batch automation with the new pre-game UI.
+- 2026-03-17: Post-change AI smoke batch (`output/ai-batch-backjump-smoke.log`): 3/4 matches finished within 300s, 1/4 unfinished by time budget (no runtime/test harness errors).

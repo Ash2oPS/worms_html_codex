@@ -1,0 +1,16 @@
+[
+  {
+    "id": "red",
+    "name": "Red Regiment",
+    "color": "#ff6868",
+    "controller": "ai",
+    "worms": ["Ajax", "Brutus", "Cassius"]
+  },
+  {
+    "id": "blue",
+    "name": "Blue Brigade",
+    "color": "#71b0ff",
+    "controller": "ai",
+    "worms": ["Iris", "Nova", "Rook"]
+  }
+]

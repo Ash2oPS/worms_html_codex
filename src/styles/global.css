@@ -1,0 +1,198 @@
+:root {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #f4f7fb;
+  background: #0e1729;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: radial-gradient(circle at 20% 5%, #24395f 0%, #0e1729 55%, #070d18 100%);
+}
+
+#app {
+  display: block;
+}
+
+.game-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.game-shell canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.loading {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #e8efff;
+  letter-spacing: 0.04em;
+  font-size: 1.05rem;
+}
+
+.name-setup {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(4 10 22 / 72%);
+  backdrop-filter: blur(4px);
+}
+
+.name-setup__panel {
+  width: min(760px, 92vw);
+  max-height: min(86vh, 840px);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 22px;
+  border-radius: 16px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  background: linear-gradient(160deg, rgb(17 34 64 / 95%) 0%, rgb(10 24 47 / 95%) 100%);
+  box-shadow: 0 20px 44px rgb(0 0 0 / 38%);
+}
+
+.name-setup__title {
+  margin: 0;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: #f5f8ff;
+}
+
+.name-setup__subtitle {
+  margin: 0;
+  color: #d6e1fb;
+  font-size: 0.95rem;
+}
+
+.name-setup__body {
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+  padding-right: 4px;
+}
+
+.name-setup__team {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 4%);
+  border: 1px solid rgb(255 255 255 / 11%);
+  border-left: 4px solid var(--team-color, #8fb6ff);
+}
+
+.name-setup__team-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.name-setup__team-title {
+  margin: 0;
+  color: var(--team-color, #8fb6ff);
+  font-size: 1.02rem;
+}
+
+.name-setup__controller {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.name-setup__controller-label {
+  color: #c7d7fb;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.name-setup__controller-select {
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 8px;
+  background: rgb(8 18 36 / 88%);
+  color: #f7fbff;
+  padding: 6px 8px;
+  font: 700 0.85rem 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.name-setup__controller-select:focus {
+  outline: none;
+  border-color: #ffdf85;
+  box-shadow: 0 0 0 2px rgb(255 223 133 / 20%);
+}
+
+.name-setup__worm-list {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.name-setup__field {
+  display: grid;
+  gap: 6px;
+}
+
+.name-setup__field-label {
+  color: #b9c8eb;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.name-setup__input {
+  width: 100%;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 8px;
+  background: rgb(8 18 36 / 88%);
+  color: #f7fbff;
+  padding: 9px 10px;
+  font: 600 0.95rem 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.name-setup__input:focus {
+  outline: none;
+  border-color: #ffdf85;
+  box-shadow: 0 0 0 2px rgb(255 223 133 / 20%);
+}
+
+.name-setup__submit {
+  justify-self: end;
+  border: 0;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #ffd786 0%, #eab64a 100%);
+  color: #2a1d00;
+  font: 800 0.95rem 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  letter-spacing: 0.02em;
+  padding: 10px 18px;
+  cursor: pointer;
+}
+
+.name-setup__submit:hover {
+  filter: brightness(1.04);
+}

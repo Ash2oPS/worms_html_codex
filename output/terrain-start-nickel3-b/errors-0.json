@@ -1,0 +1,6 @@
+[
+  {
+    "type": "pageerror",
+    "text": "TypeError: Cannot set properties of undefined (setting 'holes')"
+  }
+]
