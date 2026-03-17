@@ -1,4 +1,5 @@
 import { Application, Assets } from 'pixi.js';
+import { resolvePublicAssetUrl } from '../core/assetUrl';
 import { loadGameConfig } from '../data/loadGameConfig';
 import { RapierContext } from '../engine/physics/RapierContext';
 import { AudioService } from '../infra/audio/AudioService';
@@ -36,9 +37,9 @@ export const bootstrap = async (): Promise<void> => {
     autoDensity: true,
     preference: 'webgl',
   });
-  await Assets.load('/assets/worms/worms_sprite_00.png');
-  await Assets.load('/assets/worms/worms_hand_sprite_00.png');
-  await Assets.load('/assets/weapons/bazooka_sprite_00.png');
+  await Assets.load(resolvePublicAssetUrl('assets/worms/worms_sprite_00.png'));
+  await Assets.load(resolvePublicAssetUrl('assets/worms/worms_hand_sprite_00.png'));
+  await Assets.load(resolvePublicAssetUrl('assets/weapons/bazooka_sprite_00.png'));
   app.canvas.setAttribute('aria-label', 'Worms-like battle');
   shell.appendChild(app.canvas);
   await openWormNameSetupModal(shell, config.teams);

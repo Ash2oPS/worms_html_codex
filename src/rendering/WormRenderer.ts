@@ -1,5 +1,10 @@
 import { Container, Graphics, Sprite, Text } from 'pixi.js';
+import { resolvePublicAssetUrl } from '../core/assetUrl';
 import type { MatchState } from '../domain/state';
+
+const WORM_SPRITE_URL = resolvePublicAssetUrl('assets/worms/worms_sprite_00.png');
+const HAND_SPRITE_URL = resolvePublicAssetUrl('assets/worms/worms_hand_sprite_00.png');
+const BAZOOKA_SPRITE_URL = resolvePublicAssetUrl('assets/weapons/bazooka_sprite_00.png');
 
 export class WormRenderer {
   private static readonly WORM_SPRITE_BASE_SIZE = 32;
@@ -12,8 +17,8 @@ export class WormRenderer {
   readonly graphics = new Graphics();
   private readonly nameLabels = new Map<string, Text>();
   private readonly wormSprites = new Map<string, Sprite>();
-  private readonly handAimSprite = Sprite.from('/assets/worms/worms_hand_sprite_00.png');
-  private readonly bazookaAimSprite = Sprite.from('/assets/weapons/bazooka_sprite_00.png');
+  private readonly handAimSprite = Sprite.from(HAND_SPRITE_URL);
+  private readonly bazookaAimSprite = Sprite.from(BAZOOKA_SPRITE_URL);
 
   constructor() {
     this.container.addChild(this.wormLayer);
@@ -133,7 +138,7 @@ export class WormRenderer {
       return existing;
     }
 
-    const sprite = Sprite.from('/assets/worms/worms_sprite_00.png');
+    const sprite = Sprite.from(WORM_SPRITE_URL);
     sprite.anchor.set(0.5, 1);
     sprite.texture.source.scaleMode = 'nearest';
     sprite.roundPixels = true;

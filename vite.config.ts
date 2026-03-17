@@ -38,6 +38,7 @@ const rapierWasmShim = (): Plugin => ({
 });
 
 export default defineConfig({
+  base: './',
   plugins: [rapierWasmShim()],
   build: {
     // The runtime code is now small; only the isolated Pixi vendor chunk remains slightly above the default warning threshold.

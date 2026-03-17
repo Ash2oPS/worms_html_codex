@@ -38,6 +38,8 @@ Original prompt: "okay mets en place ce projet web avec les libs que tu me conse
 - 2026-03-16: Added marching-squares extraction module (`src/engine/terrain/marchingSquares.ts`) to derive boundary segments from voxelized terrain.
 - 2026-03-16: Switched terrain physics generation to marching-squares boundary segment colliders (`ColliderDesc.segment`) in `HeightMapTerrain.rebuildColliders`, replacing chunk-box colliders for smoother contact along irregular shapes.
 - 2026-03-16: Updated `TerrainRenderer` to draw marching-squares boundary lines on top of layered fill, with line-style reset fix to prevent per-row stroke artifacts after terrain updates.
+- 2026-03-17: Fixed GitHub Pages deployment by switching Vite to a relative base (`./`), resolving runtime public asset URLs from `import.meta.env.BASE_URL`, and adding a Pages workflow that publishes `dist/` instead of the raw TypeScript sources.
+- 2026-03-17: Re-validated the GitHub Pages fix with `npm run build` plus a local `/worms_html_codex/` static-host simulation and Playwright capture (`output/gh-pages-pages-check/shot-0.png`, `state-0.json`); HTML, JS, CSS, WASM, favicon, and gameplay sprites all loaded with HTTP 200 and no runtime console errors.
 - 2026-03-16: Re-validated with `npm run build` and Playwright:
 - `output/terrain-msq-idle/shot-0.png` (stable initial render, no console errors),
 - `output/terrain-msq-v4/shot-0.png` + `shot-1.png` (post-shot terrain update remains stable),
