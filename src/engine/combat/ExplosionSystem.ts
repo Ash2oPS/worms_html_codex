@@ -1,7 +1,6 @@
 import type { MatchState, Vec2, WormState } from '../../domain/state';
 import { IdFactory } from '../../core/idFactory';
 import { distance, normalize } from '../../core/math';
-import { RapierContext } from '../physics/RapierContext';
 import { HeightMapTerrain } from '../terrain/HeightMapTerrain';
 import { WormPhysicsSystem } from '../worms/WormPhysicsSystem';
 import { WeaponCatalog } from './WeaponCatalog';
@@ -17,7 +16,6 @@ export class ExplosionSystem {
   } as const;
 
   constructor(
-    private readonly rapier: RapierContext,
     private readonly idFactory: IdFactory,
     private readonly terrain: HeightMapTerrain,
     private readonly weaponCatalog: WeaponCatalog,
@@ -124,7 +122,7 @@ export class ExplosionSystem {
     baseImpulse: number,
   ): void {
     for (const worm of worms) {
-      if (!worm.alive || worm.bodyHandle === null) {
+      if (!worm.alive) {
         continue;
       }
 
@@ -143,18 +141,10 @@ export class ExplosionSystem {
       const boostedBaseImpulse = baseImpulse * 3.15;
       const impulseStrength = boostedBaseImpulse * Math.max(0.52, falloff);
       const verticalLaunch = boostedBaseImpulse * (0.85 + (Math.max(0, falloff) * 0.55));
-      const body = this.rapier.world.getRigidBody(worm.bodyHandle);
-      if (!body) {
-        continue;
-      }
-
-      body.applyImpulse(
-        {
-          x: direction.x * impulseStrength,
-          y: (direction.y * impulseStrength) - verticalLaunch,
-        },
-        true,
-      );
+      this.wormPhysics.applyImpulse(worm, {
+        x: direction.x * impulseStrength,
+        y: (direction.y * impulseStrength) - verticalLaunch,
+      });
     }
   }
 

@@ -105,6 +105,7 @@ export interface WaterConfig {
 export interface MatchConfig {
   wormsPerTeam: number;
   spawnPaddingX: number;
+  maxDurationMs: number;
 }
 
 export interface RulesConfig {
@@ -153,4 +154,46 @@ export interface GameConfig {
   rules: RulesConfig;
   teams: TeamTemplate[];
   weapons: WeaponConfig[];
+}
+
+export interface VisualsConfig {
+  cameraAimingZoom: number;
+  cameraIdleZoom: number;
+  terrainTextureStrength: number;
+}
+
+export interface AudioConfig {
+  masterVolume: number;
+  enableSfx: boolean;
+}
+
+export interface UiConfig {
+  showNameSetupModal: boolean;
+  wormNameMaxLength: number;
+}
+
+export interface StoreConfig {
+  playStoreUrl: string;
+  appStoreUrl: string;
+  redirectAfterClicks: number;
+  redirectAfterClickDelayMs: number;
+}
+
+export interface GameSettingsGameplayConfig {
+  rules: RulesConfig;
+  teams: TeamTemplate[];
+  weapons: WeaponConfig[];
+}
+
+export interface GameSettingsSnapshot {
+  gameplay: GameSettingsGameplayConfig;
+  visuals: VisualsConfig;
+  audio: AudioConfig;
+  ui: UiConfig;
+  store: StoreConfig;
+  tooltips: Record<string, unknown>;
+}
+
+export interface GameSettingsConfig extends GameSettingsSnapshot {
+  default: GameSettingsSnapshot;
 }

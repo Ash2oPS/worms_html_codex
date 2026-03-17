@@ -1,4 +1,4 @@
-import type { TurnConfig } from '../../domain/config';
+import type { MatchConfig, TurnConfig } from '../../domain/config';
 import type { MatchState, WormState } from '../../domain/state';
 
 export class TurnSystem {
@@ -6,11 +6,16 @@ export class TurnSystem {
   private teamWormOrder = new Map<string, string[]>();
   private teamCursor = new Map<string, number>();
   private currentTeamIndex = -1;
+  private elapsedMatchMs = 0;
 
-  constructor(private readonly config: TurnConfig) {}
+  constructor(
+    private readonly config: TurnConfig,
+    private readonly matchConfig: MatchConfig,
+  ) {}
 
   initialize(match: MatchState): void {
     this.buildTeamRotation(match);
+    this.elapsedMatchMs = 0;
     match.turnNumber = 1;
     match.phase = 'aiming';
     match.turnTimeLeftMs = this.config.durationMs;
@@ -30,6 +35,21 @@ export class TurnSystem {
 
   update(match: MatchState, deltaMs: number): void {
     if (match.phase === 'match_over') {
+      return;
+    }
+
+    const winnerTeam = this.detectWinner(match);
+    if (winnerTeam !== null) {
+      this.finishMatch(match, winnerTeam);
+      return;
+    }
+
+    this.elapsedMatchMs += deltaMs;
+    if (
+      this.matchConfig.maxDurationMs >= 0
+      && this.elapsedMatchMs >= this.matchConfig.maxDurationMs
+    ) {
+      this.finishMatch(match, this.resolveTiebreakWinner(match));
       return;
     }
 
@@ -66,9 +86,7 @@ export class TurnSystem {
   private advanceTurn(match: MatchState): void {
     const winnerTeam = this.detectWinner(match);
     if (winnerTeam !== null) {
-      match.winnerTeamId = winnerTeam;
-      match.phase = 'match_over';
-      match.turnTimeLeftMs = 0;
+      this.finishMatch(match, winnerTeam);
       return;
     }
 
@@ -96,9 +114,7 @@ export class TurnSystem {
       return;
     }
 
-    match.phase = 'match_over';
-    match.winnerTeamId = null;
-    match.turnTimeLeftMs = 0;
+    this.finishMatch(match, null);
   }
 
   private detectWinner(match: MatchState): string | null {
@@ -202,5 +218,46 @@ export class TurnSystem {
       }
     }
     return aliveTeamIds;
+  }
+
+  private resolveTiebreakWinner(match: MatchState): string | null {
+    let bestTeamId: string | null = null;
+    let bestHp = -1;
+    let bestAliveCount = -1;
+    let isTie = false;
+
+    for (const team of match.teams) {
+      let totalHp = 0;
+      let aliveCount = 0;
+      for (const worm of match.worms) {
+        if (worm.teamId !== team.id) {
+          continue;
+        }
+        totalHp += Math.max(0, worm.health);
+        if (worm.alive) {
+          aliveCount += 1;
+        }
+      }
+
+      if (totalHp > bestHp || (totalHp === bestHp && aliveCount > bestAliveCount)) {
+        bestTeamId = team.id;
+        bestHp = totalHp;
+        bestAliveCount = aliveCount;
+        isTie = false;
+        continue;
+      }
+
+      if (totalHp === bestHp && aliveCount === bestAliveCount) {
+        isTie = true;
+      }
+    }
+
+    return isTie ? null : bestTeamId;
+  }
+
+  private finishMatch(match: MatchState, winnerTeamId: string | null): void {
+    match.phase = 'match_over';
+    match.winnerTeamId = winnerTeamId;
+    match.turnTimeLeftMs = 0;
   }
 }

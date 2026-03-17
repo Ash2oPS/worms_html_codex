@@ -1,10 +1,10 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { WeaponMenuView } from '../engine/combat/WeaponMenuController';
-
-export interface WeaponMenuClickResult {
-  kind: 'entry' | 'outside';
-  index?: number;
-}
+import {
+  createWeaponMenuLayout,
+  resolveWeaponMenuClick,
+  type WeaponMenuLayout,
+} from '../engine/combat/WeaponMenuLayout';
 
 export class WeaponMenuRenderer {
   readonly container = new Container();
@@ -29,9 +29,7 @@ export class WeaponMenuRenderer {
     },
   });
   private readonly cellLabels: Text[] = [];
-  private isOpen = false;
-  private panelBounds = { x: 0, y: 0, width: 0, height: 0 };
-  private readonly cellBounds: Array<{ index: number; x: number; y: number; width: number; height: number }> = [];
+  private layout: WeaponMenuLayout | null = null;
 
   constructor(
     private readonly worldWidth: number,
@@ -45,24 +43,21 @@ export class WeaponMenuRenderer {
   }
 
   render(menu: WeaponMenuView): void {
-    this.isOpen = menu.isOpen;
     this.container.visible = menu.isOpen;
+    this.layout = createWeaponMenuLayout(this.worldWidth, this.worldHeight, menu);
     if (!menu.isOpen) {
-      this.cellBounds.length = 0;
       return;
     }
 
-    const columns = Math.max(1, menu.columns);
-    const rows = Math.max(1, Math.ceil(menu.entries.length / columns));
-    const cellWidth = 160;
-    const cellHeight = 70;
-    const gap = 12;
-    const panelWidth = (columns * cellWidth) + ((columns - 1) * gap) + 56;
-    const panelHeight = (rows * cellHeight) + ((rows - 1) * gap) + 112;
-    const panelX = (this.worldWidth - panelWidth) * 0.5;
-    const panelY = (this.worldHeight - panelHeight) * 0.5;
-    this.panelBounds = { x: panelX, y: panelY, width: panelWidth, height: panelHeight };
-    this.cellBounds.length = 0;
+    if (!this.layout) {
+      return;
+    }
+
+    const { panelBounds, cellBounds, cellWidth, cellHeight } = this.layout;
+    const panelX = panelBounds.x;
+    const panelY = panelBounds.y;
+    const panelWidth = panelBounds.width;
+    const panelHeight = panelBounds.height;
 
     this.backdrop.clear();
     this.backdrop.beginFill(0x000000, 0.42);
@@ -82,22 +77,15 @@ export class WeaponMenuRenderer {
     this.hint.x = panelX + 24;
     this.hint.y = panelY + 48;
 
-    const gridX = panelX + 24;
-    const gridY = panelY + 74;
     for (let index = 0; index < menu.entries.length; index += 1) {
       const entry = menu.entries[index];
-      const column = index % columns;
-      const row = Math.floor(index / columns);
-      const x = gridX + (column * (cellWidth + gap));
-      const y = gridY + (row * (cellHeight + gap));
+      const bounds = cellBounds[index];
+      if (!bounds) {
+        continue;
+      }
+      const x = bounds.x;
+      const y = bounds.y;
       const isCursor = index === menu.cursorIndex;
-      this.cellBounds.push({
-        index,
-        x,
-        y,
-        width: cellWidth,
-        height: cellHeight,
-      });
 
       this.panel.beginFill(
         isCursor ? 0x314a76 : 0x24324f,
@@ -122,26 +110,14 @@ export class WeaponMenuRenderer {
     }
   }
 
-  resolveClick(x: number, y: number): WeaponMenuClickResult | null {
-    if (!this.isOpen) {
-      return null;
-    }
+  resolveClick(x: number, y: number) {
+    return resolveWeaponMenuClick(this.layout, x, y);
+  }
 
-    for (const bounds of this.cellBounds) {
-      const withinX = x >= bounds.x && x <= bounds.x + bounds.width;
-      const withinY = y >= bounds.y && y <= bounds.y + bounds.height;
-      if (withinX && withinY) {
-        return { kind: 'entry', index: bounds.index };
-      }
-    }
-
-    const inPanelX = x >= this.panelBounds.x && x <= this.panelBounds.x + this.panelBounds.width;
-    const inPanelY = y >= this.panelBounds.y && y <= this.panelBounds.y + this.panelBounds.height;
-    if (inPanelX && inPanelY) {
-      return null;
-    }
-
-    return { kind: 'outside' };
+  destroy(): void {
+    this.container.destroy({ children: true });
+    this.cellLabels.length = 0;
+    this.layout = null;
   }
 
   private ensureLabel(index: number): Text {

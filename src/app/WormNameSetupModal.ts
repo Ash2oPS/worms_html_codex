@@ -8,11 +8,24 @@ const normalizeName = (rawValue: string, fallback: string): string => {
 const normalizeController = (rawValue: string): 'human' | 'ai' =>
   rawValue === 'ai' ? 'ai' : 'human';
 
+const cloneTeamTemplate = (team: TeamTemplate): TeamTemplate => ({
+  ...team,
+  worms: [...team.worms],
+});
+
+const applySessionTeams = (
+  target: TeamTemplate[],
+  sessionTeams: TeamTemplate[],
+): void => {
+  target.splice(0, target.length, ...sessionTeams.map(cloneTeamTemplate));
+};
+
 export const openWormNameSetupModal = async (
   host: HTMLElement,
   teams: TeamTemplate[],
-): Promise<void> =>
+): Promise<TeamTemplate[]> =>
   new Promise((resolve) => {
+    const sourceTeams = teams.map(cloneTeamTemplate);
     const overlay = document.createElement('div');
     overlay.className = 'name-setup';
 
@@ -36,15 +49,15 @@ export const openWormNameSetupModal = async (
     const fields: Array<{
       input: HTMLInputElement;
       fallback: string;
-      team: TeamTemplate;
-      index: number;
+      teamIndex: number;
+      wormIndex: number;
     }> = [];
     const controllerFields: Array<{
       select: HTMLSelectElement;
-      team: TeamTemplate;
+      teamIndex: number;
     }> = [];
 
-    teams.forEach((team, teamIndex) => {
+    sourceTeams.forEach((team, teamIndex) => {
       const section = document.createElement('section');
       section.className = 'name-setup__team';
       section.dataset.teamId = team.id;
@@ -66,20 +79,20 @@ export const openWormNameSetupModal = async (
 
       const controllerLabel = document.createElement('span');
       controllerLabel.className = 'name-setup__controller-label';
-      controllerLabel.textContent = 'Contrôle';
+      controllerLabel.textContent = 'Controle';
       controllerField.appendChild(controllerLabel);
 
       const controllerSelect = document.createElement('select');
       controllerSelect.className = 'name-setup__controller-select';
       controllerSelect.id = `team-controller-${team.id}`;
-      controllerSelect.setAttribute('aria-label', `Contrôle équipe ${team.name}`);
+      controllerSelect.setAttribute('aria-label', `Controle equipe ${team.name}`);
       controllerSelect.innerHTML = [
         '<option value="human">Joueur</option>',
         '<option value="ai">IA</option>',
       ].join('');
       controllerSelect.value = team.controller === 'ai' ? 'ai' : 'human';
       controllerField.appendChild(controllerSelect);
-      controllerFields.push({ select: controllerSelect, team });
+      controllerFields.push({ select: controllerSelect, teamIndex });
 
       const list = document.createElement('div');
       list.className = 'name-setup__worm-list';
@@ -109,8 +122,8 @@ export const openWormNameSetupModal = async (
         fields.push({
           input,
           fallback: defaultName || `${team.name} ${wormIndex + 1}`,
-          team,
-          index: wormIndex,
+          teamIndex,
+          wormIndex,
         });
       });
     });
@@ -124,18 +137,29 @@ export const openWormNameSetupModal = async (
     panel.addEventListener('submit', (event) => {
       event.preventDefault();
 
+      const sessionTeams = sourceTeams.map(cloneTeamTemplate);
       for (const field of controllerFields) {
-        field.team.controller = normalizeController(field.select.value);
+        const team = sessionTeams[field.teamIndex];
+        if (team) {
+          team.controller = normalizeController(field.select.value);
+        }
       }
 
       for (const field of fields) {
+        const team = sessionTeams[field.teamIndex];
+        if (!team) {
+          continue;
+        }
         const nextName = normalizeName(field.input.value, field.fallback);
         field.input.value = nextName;
-        field.team.worms[field.index] = nextName;
+        team.worms[field.wormIndex] = nextName;
       }
 
+      // Backward-compatible application to the current runtime session object.
+      applySessionTeams(teams, sessionTeams);
+
       overlay.remove();
-      resolve();
+      resolve(sessionTeams);
     });
 
     overlay.appendChild(panel);

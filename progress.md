@@ -195,3 +195,43 @@ pm run build + Playwright captures (output/terrain-msq-beautify-idle, output/ter
 - Visual captures saved: `output/double-jump-captures/normal-jump.png`, `output/double-jump-captures/double-jump.png`, plus AI run `output/backjump-ai-run/shot-*.png` (no errors file).
 - 2026-03-17: Updated `output/ai_batch_eval.mjs` to auto-start combat by clicking `.name-setup__submit` when roster modal is present, preserving batch automation with the new pre-game UI.
 - 2026-03-17: Post-change AI smoke batch (`output/ai-batch-backjump-smoke.log`): 3/4 matches finished within 300s, 1/4 unfinished by time budget (no runtime/test harness errors).
+- 2026-03-17: Tooling/QA cleanup pass: added reproducible npm scripts (`typecheck`, `qa:smoke`, `qa:ai`, `verify`), switched `serve` to local dependency, and documented setup/verification flow in `README.md`.
+- 2026-03-17: Moved reusable QA scripts from `output/*.mjs` into `scripts/qa/*.mjs` and removed hard-coded machine paths to Playwright by importing from local `playwright` package.
+- 2026-03-17: Cleaned dead network/tooling dependencies by removing `src/infra/network/ColyseusGateway.ts` and dropping `colyseus.js`, `earcut`, `polygon-clipping` from `package.json`.
+- 2026-03-17: Updated `.gitignore` to stop versioning generated artifacts under `output/`; kept `output/.gitkeep` as minimal local folder anchor.
+- 2026-03-17: Known integration blocker during this pass: `npm run typecheck` currently fails on runtime/state refactor conflicts outside tooling ownership (`WormPhysicsSystem` path/type drift and `BattleRenderer` signature mismatch), so `npm run build`/`verify` cannot be green until that branch is reconciled.
+- 2026-03-17: Introduced canonical `src/game-settings.json` with `default`, `tooltips`, `store`, and a new `src/data/gameConfigAdapter.ts` layer for validation, sanitization, adapter mapping, and legacy compat via `VITE_GAME_CONFIG_SOURCE=legacy`.
+- 2026-03-17: Updated `WormNameSetupModal` to return a derived session roster/controllers payload instead of mutating source config objects in place.
+- 2026-03-17: Refactored gameplay orchestration out of `BattleGame` into `src/game/BattleSimulationRuntime.ts`; preserved `window.render_game_to_text` and `window.advanceTime`.
+- 2026-03-17: Removed engine-only worm fields from `WormState` (`bodyHandle`, `groundNormal`, `groundAngleRad`) and moved physics/render orientation ownership into `WormPhysicsSystem`.
+- 2026-03-17: Decoupled weapon menu hit-testing from renderer by introducing shared pure helper `src/engine/combat/WeaponMenuLayout.ts`.
+- 2026-03-17: Split terrain responsibilities further by introducing `TerrainMutationTracker` and `TerrainColliderManager`; added `destroy()` on `HeightMapTerrain` and switched `AudioService` to explicit config-driven no-op adapter without live Howler playback.
+- 2026-03-17: Strengthened lifecycle cleanup: `BattleGame.destroy()` now tears down runtime/renderer/Rapier, and runtime/rendering classes gained explicit cleanup support.
+- 2026-03-17: Fixed QA port collision issue by moving smoke/AI defaults to `127.0.0.1:41783`; discovered `serve -l 41783` bound random ports under Windows, then replaced `verify` with `scripts/qa/verify_smoke.mjs` to run an inline static server plus Playwright smoke deterministically.
+- 2026-03-17: Final validation green: `npm run typecheck`, `npm run build`, and `npm run verify` all succeed after integration.
+- 2026-03-17: Manual integrated smoke on built app captured `output/verify-smoke-shot.png`; text snapshot shows expected Worms-like payload (`phase`, `turn`, `worms`, `projectiles`, `weaponMenu`, `winnerTeamId`).
+- 2026-03-17: Quick AI batch sanity on built app (`2` games, `90s` budget each) runs without crashes but both matches hit `match_not_finished_within_budget`; treat this as residual AI/tuning debt, not a structural regression from the refactor.
+- 2026-03-17: Removed the last legacy config path: `loadGameConfig()` is now canonical-only, `src/data/rules.json` / `teams.json` / `weapons.json` were deleted, and `gameConfigAdapter` now falls back to the canonical `default` snapshot from `src/game-settings.json`.
+- 2026-03-17: Added generic QA wrapper `scripts/qa/run_with_static_server.mjs` so `npm run qa:smoke` and `npm run qa:ai` self-host the latest `dist/` build instead of depending on a manually started preview server.
+- 2026-03-17: Tightened AI match resolution in `WormAiController` with earlier stalemate pressure, blocked-shot grenade switching, faster stuck-jump recovery, and desperation fire during urgent windows.
+- 2026-03-17: Re-validation after final cleanup:
+- `npm run qa:smoke` passed with the new inline-server wrapper.
+- `node scripts/qa/run_with_static_server.mjs scripts/qa/ai_batch_eval.mjs 4 180` finished `4/4` games with `0` issues.
+- `node scripts/qa/run_with_static_server.mjs scripts/qa/ai_batch_eval.mjs 6 240` finished `6/6` games with `0` issues.
+- `npm run verify` remains green after the final patches.
+- 2026-03-17: Added `vite.config.ts` with explicit vendor chunking for `pixi.js` and `@dimforge/rapier2d-compat`, plus a dynamic `import('./app/bootstrap')` entry in `src/main.ts`. Production build now isolates gameplay bootstrap (`~110 kB`) from vendor payloads instead of shipping one huge eager app chunk.
+- 2026-03-17: The remaining big build artifact is the Rapier compat vendor chunk itself; set `build.chunkSizeWarningLimit` to `1800` to reflect that this chunk is now an intentional isolated dependency, not an accidental monolith in app code.
+- 2026-03-17: Finished QA ergonomics cleanup by routing `qa:backjump`, `qa:double-jump`, and `qa:double-jump:capture` through the same inline static-server wrapper used by smoke/AI.
+- 2026-03-17: Swapped physics runtime from `@dimforge/rapier2d-compat` to `@dimforge/rapier2d` and added a small Vite shim plugin so Rolldown can instantiate the package wasm cleanly in browser builds.
+- 2026-03-17: Post-migration production build now emits:
+- gameplay bootstrap JS around `110 kB`,
+- Rapier JS around `121 kB`,
+- Rapier wasm asset around `1.18 MB`,
+- Pixi JS around `535 kB`.
+- 2026-03-17: Tightened `build.chunkSizeWarningLimit` back down to `600` because the physics JS chunk is no longer bloated after dropping the compat package.
+- 2026-03-17: Improved QA static-server robustness so scripts fall back to a free localhost port automatically instead of crashing on `EADDRINUSE`.
+- 2026-03-17: Validation after Rapier migration:
+- `npm run verify` passed.
+- `node scripts/qa/run_with_static_server.mjs scripts/qa/ai_batch_eval.mjs 4 180` finished `4/4` games with `0` issues.
+- `npm run qa:double-jump` passed (`normal forward`, `double tap backward + higher`).
+- `npm run qa:backjump` passed (`42` back-jump events across `122` jump starts in `4` games).

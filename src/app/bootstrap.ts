@@ -45,16 +45,29 @@ export const bootstrap = async (): Promise<void> => {
 
   const audio = new AudioService();
   const game = new BattleGame(app, config, rapier, audio);
-  app.ticker.add(() => {
+  const tickerCallback = (): void => {
     game.tick(app.ticker.deltaMS);
-  });
+  };
+  app.ticker.add(tickerCallback);
 
   window.render_game_to_text = (): string => game.toTextSnapshot();
   window.advanceTime = (ms: number): void => {
     game.advanceTime(ms);
   };
 
-  window.addEventListener('beforeunload', () => {
+  let cleanedUp = false;
+  const cleanup = (): void => {
+    if (cleanedUp) {
+      return;
+    }
+
+    cleanedUp = true;
+    app.ticker.remove(tickerCallback);
+    window.removeEventListener('beforeunload', cleanup);
+    window.render_game_to_text = undefined;
+    window.advanceTime = undefined;
     game.destroy();
-  });
+  };
+
+  window.addEventListener('beforeunload', cleanup);
 };

@@ -1,4 +1,4 @@
-import type { RigidBody } from '@dimforge/rapier2d-compat';
+import type { RigidBody } from '@dimforge/rapier2d';
 import type { PhysicsConfig } from '../../domain/config';
 import type { Vec2, WormState } from '../../domain/state';
 import { clamp } from '../../core/math';
@@ -22,12 +22,16 @@ export class WormPhysicsSystem {
   private static readonly AIR_ROTATION_BLEND = 0.2;
   private static readonly MAX_GROUND_TILT_RAD = 1.16;
   private static readonly BACK_JUMP_CONVERSION_FRAMES = 12;
+  private static readonly DEFAULT_GROUND_NORMAL: Vec2 = { x: 0, y: -1 };
 
   private readonly coyoteFramesByWorm = new Map<string, number>();
   private readonly jumpBufferFramesByWorm = new Map<string, number>();
   private readonly backJumpBufferFramesByWorm = new Map<string, number>();
   private readonly jumpTakeoffFramesByWorm = new Map<string, number>();
   private readonly horizontalLockByWorm = new Map<string, boolean>();
+  private readonly bodyHandlesByWorm = new Map<string, number>();
+  private readonly groundNormalByWorm = new Map<string, Vec2>();
+  private readonly groundAngleByWorm = new Map<string, number>();
   private readonly jumpForwardSpeed: number;
   private readonly backJumpSpeed: number;
   private readonly backJumpImpulse: number;
@@ -58,7 +62,9 @@ export class WormPhysicsSystem {
       .setRestitution(0.05);
     this.rapier.world.createCollider(colliderDesc, body);
 
-    worm.bodyHandle = body.handle;
+    this.bodyHandlesByWorm.set(worm.id, body.handle);
+    this.groundNormalByWorm.set(worm.id, { ...WormPhysicsSystem.DEFAULT_GROUND_NORMAL });
+    this.groundAngleByWorm.set(worm.id, 0);
     this.coyoteFramesByWorm.set(worm.id, WormPhysicsSystem.COYOTE_FRAMES);
     this.jumpBufferFramesByWorm.set(worm.id, 0);
     this.backJumpBufferFramesByWorm.set(worm.id, 0);
@@ -67,15 +73,19 @@ export class WormPhysicsSystem {
   }
 
   removeBody(worm: WormState): void {
-    if (worm.bodyHandle === null) {
+    const handle = this.bodyHandlesByWorm.get(worm.id);
+    if (handle === undefined) {
       return;
     }
 
-    const body = this.rapier.world.getRigidBody(worm.bodyHandle);
+    const body = this.rapier.world.getRigidBody(handle);
     if (body) {
       this.rapier.world.removeRigidBody(body);
     }
-    worm.bodyHandle = null;
+
+    this.bodyHandlesByWorm.delete(worm.id);
+    this.groundNormalByWorm.delete(worm.id);
+    this.groundAngleByWorm.delete(worm.id);
     this.coyoteFramesByWorm.delete(worm.id);
     this.jumpBufferFramesByWorm.delete(worm.id);
     this.backJumpBufferFramesByWorm.delete(worm.id);
@@ -83,8 +93,16 @@ export class WormPhysicsSystem {
     this.horizontalLockByWorm.delete(worm.id);
   }
 
+  hasBody(worm: WormState): boolean {
+    return this.bodyHandlesByWorm.has(worm.id);
+  }
+
+  getGroundAnglesSnapshot(): ReadonlyMap<string, number> {
+    return this.groundAngleByWorm;
+  }
+
   setHorizontalMovementLocked(worm: WormState, locked: boolean): void {
-    if (!worm.alive || worm.bodyHandle === null) {
+    if (!worm.alive) {
       return;
     }
 
@@ -93,7 +111,7 @@ export class WormPhysicsSystem {
       return;
     }
 
-    const body = this.rapier.world.getRigidBody(worm.bodyHandle);
+    const body = this.getBody(worm.id);
     if (!body) {
       return;
     }
@@ -107,6 +125,19 @@ export class WormPhysicsSystem {
     }
   }
 
+  applyImpulse(worm: WormState, impulse: Vec2): void {
+    if (!worm.alive) {
+      return;
+    }
+
+    const body = this.getBody(worm.id);
+    if (!body) {
+      return;
+    }
+
+    body.applyImpulse(impulse, true);
+  }
+
   applyMovement(
     worm: WormState,
     moveAxis: number,
@@ -114,11 +145,11 @@ export class WormPhysicsSystem {
     backJumpPressed: boolean,
     terrain: HeightMapTerrain,
   ): void {
-    if (!worm.alive || worm.bodyHandle === null) {
+    if (!worm.alive) {
       return;
     }
 
-    const body = this.rapier.world.getRigidBody(worm.bodyHandle);
+    const body = this.getBody(worm.id);
     if (!body) {
       return;
     }
@@ -203,11 +234,11 @@ export class WormPhysicsSystem {
   ): WormState[] {
     const deadWorms: WormState[] = [];
     for (const worm of worms) {
-      if (!worm.alive || worm.bodyHandle === null) {
+      if (!worm.alive) {
         continue;
       }
 
-      const body = this.rapier.world.getRigidBody(worm.bodyHandle);
+      const body = this.getBody(worm.id);
       if (!body) {
         continue;
       }
@@ -245,17 +276,21 @@ export class WormPhysicsSystem {
     const targetNormal = worm.isGrounded
       ? this.sampleGroundNormal(worm, body)
       : null;
-    const desiredNormal = targetNormal ?? { x: 0, y: -1 };
+    const previousNormal = this.groundNormalByWorm.get(worm.id) ?? WormPhysicsSystem.DEFAULT_GROUND_NORMAL;
+    const desiredNormal = targetNormal ?? WormPhysicsSystem.DEFAULT_GROUND_NORMAL;
     const smoothedNormal = this.normalizeVector(
-      worm.groundNormal.x + ((desiredNormal.x - worm.groundNormal.x) * blend),
-      worm.groundNormal.y + ((desiredNormal.y - worm.groundNormal.y) * blend),
+      previousNormal.x + ((desiredNormal.x - previousNormal.x) * blend),
+      previousNormal.y + ((desiredNormal.y - previousNormal.y) * blend),
     );
-    worm.groundNormal = smoothedNormal;
+    this.groundNormalByWorm.set(worm.id, smoothedNormal);
     const targetAngle = Math.atan2(smoothedNormal.x, -smoothedNormal.y);
-    worm.groundAngleRad = clamp(
-      targetAngle,
-      -WormPhysicsSystem.MAX_GROUND_TILT_RAD,
-      WormPhysicsSystem.MAX_GROUND_TILT_RAD,
+    this.groundAngleByWorm.set(
+      worm.id,
+      clamp(
+        targetAngle,
+        -WormPhysicsSystem.MAX_GROUND_TILT_RAD,
+        WormPhysicsSystem.MAX_GROUND_TILT_RAD,
+      ),
     );
   }
 
@@ -295,7 +330,6 @@ export class WormPhysicsSystem {
 
         let normalX = hit.normal.x;
         let normalY = hit.normal.y;
-        // Flip normals that face with the downward ray so averaging stays "support-up" oriented.
         if (normalY > 0) {
           normalX = -normalX;
           normalY = -normalY;
@@ -322,7 +356,7 @@ export class WormPhysicsSystem {
   private normalizeVector(x: number, y: number): Vec2 {
     const lengthSq = (x * x) + (y * y);
     if (lengthSq < 1e-8) {
-      return { x: 0, y: -1 };
+      return WormPhysicsSystem.DEFAULT_GROUND_NORMAL;
     }
 
     const invLength = 1 / Math.sqrt(lengthSq);
@@ -397,5 +431,14 @@ export class WormPhysicsSystem {
     }
 
     return false;
+  }
+
+  private getBody(wormId: string): RigidBody | null {
+    const handle = this.bodyHandlesByWorm.get(wormId);
+    if (handle === undefined) {
+      return null;
+    }
+
+    return this.rapier.world.getRigidBody(handle);
   }
 }

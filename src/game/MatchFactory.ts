@@ -60,10 +60,7 @@ export class MatchFactory {
           power: 0.78,
           selectedWeaponId: this.weaponCatalog.defaultWeaponId(),
           position: spawn,
-          bodyHandle: null,
           isGrounded: true,
-          groundNormal: { x: 0, y: -1 },
-          groundAngleRad: 0,
         });
       }
     });

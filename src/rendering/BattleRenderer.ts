@@ -9,7 +9,7 @@ import { ProjectileRenderer } from './ProjectileRenderer';
 import { ExplosionRenderer } from './ExplosionRenderer';
 import { DamageTextRenderer } from './DamageTextRenderer';
 import { HudRenderer } from './HudRenderer';
-import { WeaponMenuRenderer, type WeaponMenuClickResult } from './WeaponMenuRenderer';
+import { WeaponMenuRenderer } from './WeaponMenuRenderer';
 import type { WeaponMenuView } from '../engine/combat/WeaponMenuController';
 import { CameraController } from './CameraController';
 
@@ -56,11 +56,12 @@ export class BattleRenderer {
     terrain: HeightMapTerrain,
     activeWeaponLabel: string,
     weaponMenu: WeaponMenuView,
+    groundAngles: ReadonlyMap<string, number>,
     deltaMs: number,
   ): void {
     this.backgroundRenderer.render(this.worldWidth, this.worldHeight, this.waterLevelY);
     this.terrainRenderer.render(terrain);
-    this.wormRenderer.render(match);
+    this.wormRenderer.render(match, groundAngles);
     this.projectileRenderer.render(match);
     this.explosionRenderer.render(match);
     this.damageTextRenderer.render(match);
@@ -77,7 +78,10 @@ export class BattleRenderer {
     this.weaponMenuRenderer.render(weaponMenu);
   }
 
-  resolveWeaponMenuClick(x: number, y: number): WeaponMenuClickResult | null {
-    return this.weaponMenuRenderer.resolveClick(x, y);
+  destroy(): void {
+    this.wormRenderer.destroy();
+    this.weaponMenuRenderer.destroy();
+    this.worldLayer.destroy({ children: true });
+    this.hudRenderer.container.destroy({ children: true });
   }
 }

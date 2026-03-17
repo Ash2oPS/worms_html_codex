@@ -1,4 +1,3 @@
-import type { Collider, RigidBody } from '@dimforge/rapier2d-compat';
 import type { TerrainConfig, WorldConfig } from '../../domain/config';
 import type { Vec2 } from '../../domain/state';
 import { clamp } from '../../core/math';
@@ -13,6 +12,8 @@ import {
   type TerrainMaterialId,
   type TerrainMaterialRun,
 } from './generation/TerrainFeatureGenerator';
+import { TerrainColliderManager } from './TerrainColliderManager';
+import { TerrainMutationTracker } from './TerrainMutationTracker';
 import {
   buildMarchingSegments,
   buildMarchingLoops,
@@ -31,17 +32,10 @@ export class HeightMapTerrain {
   private readonly heights: Float32Array;
   private readonly materials: Uint8Array;
   private readonly surfaceRows: Int16Array;
-  private readonly staticBody: RigidBody;
   private readonly heightGenerator: TerrainGenerator;
   private readonly featureGenerator: TerrainFeatureGenerator;
-  private readonly physicsChunkColumns: number;
-  private readonly physicsChunkCount: number;
-  private readonly collidersByChunk = new Map<number, Collider[]>();
-  private readonly dirtyPhysicsChunks = new Set<number>();
-  private terrainMutationDepth = 0;
-  private hasPendingTerrainMutation = false;
-  private pendingMutationMinColumn = Number.POSITIVE_INFINITY;
-  private pendingMutationMaxColumn = Number.NEGATIVE_INFINITY;
+  private readonly mutationTracker: TerrainMutationTracker;
+  private readonly colliderManager: TerrainColliderManager;
   private version = 0;
   private cachedRenderRunsVersion = -1;
   private cachedRenderRuns: TerrainMaterialRun[] = [];
@@ -62,16 +56,28 @@ export class HeightMapTerrain {
     this.cellSize = terrainConfig.columnWidth;
     this.columns = Math.ceil(worldConfig.width / this.cellSize);
     this.rows = Math.ceil(worldConfig.height / this.cellSize);
-    this.physicsChunkColumns = Math.max(12, Math.round(PHYSICS_CHUNK_WIDTH_PX / this.cellSize));
-    this.physicsChunkCount = Math.max(1, Math.ceil(this.columns / this.physicsChunkColumns));
+    const physicsChunkColumns = Math.max(12, Math.round(PHYSICS_CHUNK_WIDTH_PX / this.cellSize));
+    const physicsChunkCount = Math.max(1, Math.ceil(this.columns / physicsChunkColumns));
     this.heights = new Float32Array(this.columns);
     this.materials = new Uint8Array(this.columns * this.rows);
     this.surfaceRows = new Int16Array(this.columns);
     this.surfaceRows.fill(this.rows);
     this.heightGenerator = createTerrainGenerator(terrainConfig);
     this.featureGenerator = new TerrainFeatureGenerator(terrainConfig);
-    const bodyDesc = this.rapier.api.RigidBodyDesc.fixed();
-    this.staticBody = this.rapier.world.createRigidBody(bodyDesc);
+    this.mutationTracker = new TerrainMutationTracker(
+      this.columns,
+      physicsChunkColumns,
+      physicsChunkCount,
+    );
+    this.colliderManager = new TerrainColliderManager(
+      this.rapier,
+      this.rows,
+      this.cellSize,
+      this.columns,
+      physicsChunkColumns,
+      physicsChunkCount,
+      (column, row) => this.isCellSolid(column, row),
+    );
     this.generate();
   }
 
@@ -98,23 +104,18 @@ export class HeightMapTerrain {
     );
     this.syncHeightsFromSurfaceRows();
     this.invalidateDerivedCaches();
-    this.rebuildColliders();
+    this.colliderManager.rebuildAllChunks();
     this.bumpVersion();
   }
 
   beginMutationBatch(): void {
-    this.terrainMutationDepth += 1;
+    this.mutationTracker.beginBatch();
   }
 
   endMutationBatch(): void {
-    if (this.terrainMutationDepth <= 0) {
-      return;
-    }
-
-    this.terrainMutationDepth -= 1;
-    if (this.terrainMutationDepth === 0) {
+    this.mutationTracker.endBatch(() => {
       this.commitTerrainMutations();
-    }
+    });
   }
 
   getGroundY(x: number): number {
@@ -473,7 +474,7 @@ export class HeightMapTerrain {
     }
 
     this.registerTerrainMutation(changedMinColumn, changedMaxColumn);
-    if (this.terrainMutationDepth === 0) {
+    if (!this.mutationTracker.isBatchOpen()) {
       this.commitTerrainMutations();
     }
   }
@@ -528,6 +529,10 @@ export class HeightMapTerrain {
     return points;
   }
 
+  destroy(): void {
+    this.colliderManager.destroy();
+  }
+
   private hasSpawnClearance(x: number, y: number, radius: number): boolean {
     if (y < radius) {
       return false;
@@ -561,53 +566,19 @@ export class HeightMapTerrain {
     }
   }
 
-  private rebuildColliders(): void {
-    for (let chunkIndex = 0; chunkIndex < this.physicsChunkCount; chunkIndex += 1) {
-      this.dirtyPhysicsChunks.add(chunkIndex);
-    }
-    this.rebuildDirtyChunkColliders();
-  }
-
   private registerTerrainMutation(minColumn: number, maxColumn: number): void {
-    const clampedMin = clamp(Math.floor(minColumn), 0, Math.max(0, this.columns - 1));
-    const clampedMax = clamp(Math.floor(maxColumn), clampedMin, Math.max(0, this.columns - 1));
-    this.pendingMutationMinColumn = Math.min(this.pendingMutationMinColumn, clampedMin);
-    this.pendingMutationMaxColumn = Math.max(this.pendingMutationMaxColumn, clampedMax);
-    this.hasPendingTerrainMutation = true;
-
-    const startChunk = clamp(
-      Math.floor(clampedMin / this.physicsChunkColumns) - 1,
-      0,
-      this.physicsChunkCount - 1,
-    );
-    const endChunk = clamp(
-      Math.floor(clampedMax / this.physicsChunkColumns) + 1,
-      startChunk,
-      this.physicsChunkCount - 1,
-    );
-    for (let chunkIndex = startChunk; chunkIndex <= endChunk; chunkIndex += 1) {
-      this.dirtyPhysicsChunks.add(chunkIndex);
-    }
+    this.mutationTracker.registerColumnRange(minColumn, maxColumn);
   }
 
   private commitTerrainMutations(): void {
-    if (!this.hasPendingTerrainMutation) {
+    const mutation = this.mutationTracker.consumePendingMutation();
+    if (!mutation) {
       return;
     }
 
-    const minColumn = clamp(
-      this.pendingMutationMinColumn,
-      0,
-      Math.max(0, this.columns - 1),
-    );
-    const maxColumn = clamp(
-      this.pendingMutationMaxColumn,
-      minColumn,
-      Math.max(0, this.columns - 1),
-    );
     const layerPadding = 2;
-    const updateMinColumn = Math.max(0, minColumn - layerPadding);
-    const updateMaxColumn = Math.min(this.columns - 1, maxColumn + layerPadding);
+    const updateMinColumn = Math.max(0, mutation.minColumn - layerPadding);
+    const updateMaxColumn = Math.min(this.columns - 1, mutation.maxColumn + layerPadding);
     this.featureGenerator.refreshSurfaceAndLayersInColumnRange(
       this.columns,
       this.rows,
@@ -620,90 +591,14 @@ export class HeightMapTerrain {
     this.invalidateDerivedCaches();
     this.rebuildDirtyChunkColliders();
     this.bumpVersion();
-
-    this.hasPendingTerrainMutation = false;
-    this.pendingMutationMinColumn = Number.POSITIVE_INFINITY;
-    this.pendingMutationMaxColumn = Number.NEGATIVE_INFINITY;
   }
 
   private rebuildDirtyChunkColliders(): void {
-    if (this.dirtyPhysicsChunks.size <= 0) {
+    const chunkIndices = this.mutationTracker.consumeDirtyChunkIndices();
+    if (chunkIndices.length <= 0) {
       return;
     }
-
-    const chunkIndices = [...this.dirtyPhysicsChunks].sort((a, b) => a - b);
-    for (const chunkIndex of chunkIndices) {
-      this.rebuildChunkColliders(chunkIndex);
-    }
-    this.dirtyPhysicsChunks.clear();
-  }
-
-  private rebuildChunkColliders(chunkIndex: number): void {
-    const existingColliders = this.collidersByChunk.get(chunkIndex) ?? [];
-    for (const collider of existingColliders) {
-      this.rapier.world.removeCollider(collider, false);
-    }
-    this.collidersByChunk.delete(chunkIndex);
-
-    const coreStartColumn = chunkIndex * this.physicsChunkColumns;
-    if (coreStartColumn >= this.columns) {
-      return;
-    }
-    const coreEndColumn = Math.min(
-      this.columns - 1,
-      coreStartColumn + this.physicsChunkColumns - 1,
-    );
-    const sampleStartColumn = Math.max(0, coreStartColumn - 1);
-    const sampleEndColumn = Math.min(this.columns - 1, coreEndColumn + 1);
-    const sampleColumns = (sampleEndColumn - sampleStartColumn) + 1;
-    if (sampleColumns <= 0) {
-      return;
-    }
-
-    const sampleSegments = buildMarchingSegments(
-      sampleColumns,
-      this.rows,
-      this.cellSize,
-      (column, row) => this.isCellSolid(sampleStartColumn + column, row),
-    );
-    const sampleOffsetX = sampleStartColumn * this.cellSize;
-    const coreMinX = coreStartColumn * this.cellSize;
-    const coreMaxX = (coreEndColumn + 1) * this.cellSize;
-    const isLastChunk = chunkIndex >= this.physicsChunkCount - 1;
-    const nextChunkOverlapGuard = this.cellSize * 0.08;
-    const chunkColliders: Collider[] = [];
-
-    for (const segment of sampleSegments) {
-      const ax = segment.a.x + sampleOffsetX;
-      const ay = segment.a.y;
-      const bx = segment.b.x + sampleOffsetX;
-      const by = segment.b.y;
-      const midX = (ax + bx) * 0.5;
-      if (midX < coreMinX - nextChunkOverlapGuard) {
-        continue;
-      }
-      if (!isLastChunk && midX >= coreMaxX - nextChunkOverlapGuard) {
-        continue;
-      }
-      if (isLastChunk && midX > coreMaxX + nextChunkOverlapGuard) {
-        continue;
-      }
-
-      const dx = bx - ax;
-      const dy = by - ay;
-      if ((dx * dx) + (dy * dy) < 0.49) {
-        continue;
-      }
-
-      const desc = this.rapier.api.ColliderDesc
-        .segment({ x: ax, y: ay }, { x: bx, y: by })
-        .setFriction(0.84)
-        .setRestitution(0.005);
-      const collider = this.rapier.world.createCollider(desc, this.staticBody);
-      chunkColliders.push(collider);
-    }
-
-    this.collidersByChunk.set(chunkIndex, chunkColliders);
+    this.colliderManager.rebuildDirtyChunks(chunkIndices);
   }
 
   private cellIndex(column: number, row: number): number {

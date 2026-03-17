@@ -14,7 +14,7 @@ export class ProjectileSystem {
   ) {}
 
   fire(match: MatchState, shooter: WormState): boolean {
-    if (!shooter.alive || shooter.bodyHandle === null) {
+    if (!shooter.alive) {
       return false;
     }
 

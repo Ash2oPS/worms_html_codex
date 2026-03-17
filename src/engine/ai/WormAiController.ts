@@ -20,12 +20,12 @@ export class WormAiController {
   private static readonly AIM_TOLERANCE_DEG = 2.4;
   private static readonly POWER_TOLERANCE = 0.028;
   private static readonly MIN_FIRE_ALIGNMENT_FRAMES = 4;
-  private static readonly MIN_TURN_FRAMES_BEFORE_FIRE = 10;
-  private static readonly URGENT_FIRE_MS = 5200;
+  private static readonly MIN_TURN_FRAMES_BEFORE_FIRE = 8;
+  private static readonly URGENT_FIRE_MS = 6400;
   private static readonly REPOSITION_IF_BLOCKED_DISTANCE = 110;
   private static readonly MIN_SAFE_FIRE_DISTANCE = 84;
   private static readonly STUCK_MOVEMENT_EPSILON = 0.5;
-  private static readonly STUCK_FRAMES_FOR_JUMP = 18;
+  private static readonly STUCK_FRAMES_FOR_JUMP = 14;
   private static readonly JUMP_COOLDOWN_FRAMES = 48;
 
   private memory: AiTurnMemory | null = null;
@@ -91,6 +91,13 @@ export class WormAiController {
       y: target.position.y - (target.radius * 0.4),
     };
     const shotLineBlocked = this.terrain.segmentHitsTerrain(lineCheckOrigin, lineCheckTarget);
+    worm.selectedWeaponId = this.selectWeaponId(
+      worm,
+      horizontalDistance,
+      verticalDelta,
+      shotLineBlocked,
+      stalematePressure,
+    );
     const needsRepositionForShot = (
       shotLineBlocked
       && horizontalDistance > WormAiController.REPOSITION_IF_BLOCKED_DISTANCE
@@ -174,11 +181,25 @@ export class WormAiController {
       52,
       WormAiController.MIN_SAFE_FIRE_DISTANCE - (28 * stalematePressure),
     );
+    const desperationSafeFireDistance = Math.max(
+      34,
+      safeFireDistance - (22 * stalematePressure),
+    );
     const minAlignmentFrames = Math.max(
       1,
       Math.round(WormAiController.MIN_FIRE_ALIGNMENT_FRAMES - (2 * stalematePressure)),
     );
     const urgentFireMs = WormAiController.URGENT_FIRE_MS + (2600 * stalematePressure);
+    const inUrgentFireWindow = match.turnTimeLeftMs <= urgentFireMs;
+    const minTurnFramesBeforeFire = Math.max(
+      4,
+      Math.round(WormAiController.MIN_TURN_FRAMES_BEFORE_FIRE - (2 * stalematePressure)),
+    );
+    const looselyAlignedForShot = (
+      Math.abs(aimDelta) <= (WormAiController.AIM_TOLERANCE_DEG * 2.8)
+      && Math.abs(powerDelta) <= (WormAiController.POWER_TOLERANCE * 3)
+      && worm.facing === desiredFacing
+    );
 
     const readyToFire = (
       worm.isGrounded
@@ -188,17 +209,31 @@ export class WormAiController {
       && !needsRepositionForShot
       && (
         (
-          memory.framesInTurn >= WormAiController.MIN_TURN_FRAMES_BEFORE_FIRE
+          memory.framesInTurn >= minTurnFramesBeforeFire
           && memory.alignmentFrames >= minAlignmentFrames
         )
         || (
-          memory.framesInTurn >= WormAiController.MIN_TURN_FRAMES_BEFORE_FIRE
-          && match.turnTimeLeftMs <= urgentFireMs
+          memory.framesInTurn >= minTurnFramesBeforeFire
+          && inUrgentFireWindow
         )
       )
     );
 
+    const desperationReadyToFire = (
+      worm.isGrounded
+      && !input.jumpPressed
+      && !input.backJumpPressed
+      && memory.framesInTurn >= minTurnFramesBeforeFire
+      && inUrgentFireWindow
+      && planarDistance > desperationSafeFireDistance
+      && looselyAlignedForShot
+      && (stalematePressure >= 0.6 || memory.framesInTurn >= 24)
+    );
+
     if (readyToFire) {
+      input.firePressed = true;
+    } else if (desperationReadyToFire) {
+      input.moveAxis = 0;
       input.firePressed = true;
     }
 
@@ -232,15 +267,15 @@ export class WormAiController {
   }
 
   private resolveStalematePressure(): number {
-    if (this.stagnantDamageMs >= 55000) {
+    if (this.stagnantDamageMs >= 36000) {
       return 1;
     }
 
-    if (this.stagnantDamageMs >= 35000) {
+    if (this.stagnantDamageMs >= 24000) {
       return 0.6;
     }
 
-    if (this.stagnantDamageMs >= 22000) {
+    if (this.stagnantDamageMs >= 12000) {
       return 0.3;
     }
 
@@ -347,6 +382,39 @@ export class WormAiController {
     const farGroundY = this.terrain.getGroundY(farProbeX);
     const highestAheadGroundY = Math.min(nearGroundY, farGroundY);
     return currentGroundY - highestAheadGroundY;
+  }
+
+  private selectWeaponId(
+    worm: WormState,
+    horizontalDistance: number,
+    verticalDelta: number,
+    shotLineBlocked: boolean,
+    stalematePressure: number,
+  ): string {
+    const bazookaId = this.resolveAvailableWeaponId('bazooka');
+    const grenadeId = this.resolveAvailableWeaponId('grenade');
+    if (!grenadeId) {
+      return bazookaId ?? worm.selectedWeaponId;
+    }
+
+    const shouldUseGrenade = (
+      shotLineBlocked
+      || horizontalDistance < 180
+      || (verticalDelta < -70 && horizontalDistance < 280)
+      || (stalematePressure >= 0.6 && horizontalDistance < 300)
+    );
+    if (shouldUseGrenade) {
+      return grenadeId;
+    }
+
+    return bazookaId ?? worm.selectedWeaponId;
+  }
+
+  private resolveAvailableWeaponId(preferredId: string): string | null {
+    const exactMatch = this.weaponCatalog
+      .list()
+      .find((weapon) => weapon.id === preferredId);
+    return exactMatch?.id ?? null;
   }
 
   private computeDesiredAim(

@@ -34,7 +34,7 @@ export class WormRenderer {
     this.handLayer.addChild(this.handAimSprite);
   }
 
-  render(match: MatchState): void {
+  render(match: MatchState, groundAngles: ReadonlyMap<string, number>): void {
     this.graphics.clear();
     this.bazookaAimSprite.visible = false;
     this.handAimSprite.visible = false;
@@ -55,7 +55,7 @@ export class WormRenderer {
       const teamColor = Number.isFinite(parsedTeamColor) ? parsedTeamColor : 0x68d55f;
       wormSprite.position.set(worm.position.x, worm.position.y + worm.radius);
       wormSprite.scale.set(spriteScale * facing, spriteScale);
-      wormSprite.rotation = worm.groundAngleRad;
+      wormSprite.rotation = groundAngles.get(worm.id) ?? 0;
       wormSprite.visible = true;
       visibleSpriteIds.add(worm.id);
 
@@ -119,6 +119,12 @@ export class WormRenderer {
         label.visible = false;
       }
     }
+  }
+
+  destroy(): void {
+    this.container.destroy({ children: true });
+    this.nameLabels.clear();
+    this.wormSprites.clear();
   }
 
   private ensureWormSprite(wormId: string): Sprite {

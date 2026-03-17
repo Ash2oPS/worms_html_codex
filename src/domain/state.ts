@@ -19,10 +19,7 @@ export interface WormState {
   power: number;
   selectedWeaponId: string;
   position: Vec2;
-  bodyHandle: number | null;
   isGrounded: boolean;
-  groundNormal: Vec2;
-  groundAngleRad: number;
 }
 
 export interface TeamState {

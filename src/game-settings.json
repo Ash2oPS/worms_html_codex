@@ -1,0 +1,492 @@
+{
+  "gameplay": {
+    "rules": {
+      "world": {
+        "width": 1600,
+        "height": 900,
+        "fixedTimeStepMs": 16.6667
+      },
+      "terrain": {
+        "columnWidth": 6,
+        "minGroundY": 420,
+        "maxGroundY": 680,
+        "roughness": 56,
+        "seed": 1337,
+        "randomizeSeedOnLoad": true,
+        "generation": {
+          "waves": [
+            { "frequency": 2.1, "amplitude": 0.72 },
+            { "frequency": 5.7, "amplitude": 0.34 },
+            { "frequency": 11.4, "amplitude": 0.17 },
+            { "frequency": 18.6, "amplitude": 0.09 }
+          ],
+          "rollingNoise": {
+            "damping": 0.8,
+            "injection": 0.2,
+            "amplitude": 1.18
+          },
+          "smoothing": {
+            "iterations": 4,
+            "centerWeight": 0.56,
+            "neighborWeight": 0.22
+          },
+          "features": {
+            "mountainCount": 8,
+            "mountainHeightMin": 9,
+            "mountainHeightMax": 30,
+            "mountainRadiusMin": 8,
+            "mountainRadiusMax": 34,
+            "plateauCount": 5,
+            "plateauWidthMin": 14,
+            "plateauWidthMax": 44,
+            "plateauThicknessMin": 3,
+            "plateauThicknessMax": 8,
+            "plateauMinYRatio": 0.22,
+            "plateauMaxYRatio": 0.68,
+            "caveCount": 15,
+            "caveRadiusMin": 4,
+            "caveRadiusMax": 14,
+            "tunnelCount": 7,
+            "tunnelRadiusMin": 2,
+            "tunnelRadiusMax": 5,
+            "playablePlatformMinCount": 2,
+            "playablePlatformMaxCount": 3,
+            "playablePlatformMinWidth": 14,
+            "playablePlatformMaxWidth": 20,
+            "playablePlatformMinThickness": 3,
+            "playablePlatformMaxThickness": 5,
+            "playablePlatformMinYRatio": 0.3,
+            "playablePlatformMaxYRatio": 0.62,
+            "playablePlatformFlatTolerance": 2,
+            "playablePlatformHeadroom": 5
+          },
+          "layers": {
+            "topsoilDepth": 2,
+            "dirtDepth": 11,
+            "bedrockDepth": 3
+          }
+        }
+      },
+      "turn": {
+        "durationMs": 20000,
+        "postShotDelayMs": 1200
+      },
+      "physics": {
+        "gravityY": 820,
+        "wormRadius": 16,
+        "movementImpulse": 22,
+        "maxMoveSpeed": 145,
+        "jumpImpulse": 310,
+        "jumpForwardSpeed": 170,
+        "backJumpSpeed": 96,
+        "backJumpImpulse": 390
+      },
+      "wind": {
+        "minForce": -170,
+        "maxForce": 170
+      },
+      "water": {
+        "levelY": 760
+      },
+      "match": {
+        "wormsPerTeam": 3,
+        "spawnPaddingX": 130,
+        "maxDurationMs": 90000
+      }
+    },
+    "teams": [
+      {
+        "id": "red",
+        "name": "Red Regiment",
+        "color": "#ff6868",
+        "controller": "ai",
+        "worms": ["Ajax", "Brutus", "Cassius"]
+      },
+      {
+        "id": "blue",
+        "name": "Blue Brigade",
+        "color": "#71b0ff",
+        "controller": "ai",
+        "worms": ["Iris", "Nova", "Rook"]
+      }
+    ],
+    "weapons": [
+      {
+        "id": "bazooka",
+        "label": "Bazooka",
+        "projectile": {
+          "radius": 5,
+          "mass": 0.45,
+          "speed": 520,
+          "restitution": 0.05,
+          "fuseMs": 0,
+          "windMultiplier": 0.95,
+          "explodeOnImpact": true
+        },
+        "explosion": {
+          "radius": 92,
+          "craterRadius": 72,
+          "maxDamage": 58,
+          "knockback": 260
+        }
+      },
+      {
+        "id": "grenade",
+        "label": "Grenade",
+        "projectile": {
+          "radius": 7,
+          "mass": 0.68,
+          "speed": 420,
+          "restitution": 0.62,
+          "fuseMs": 2300,
+          "windMultiplier": 0.33,
+          "explodeOnImpact": false
+        },
+        "explosion": {
+          "radius": 108,
+          "craterRadius": 84,
+          "maxDamage": 74,
+          "knockback": 330
+        }
+      }
+    ]
+  },
+  "visuals": {
+    "cameraAimingZoom": 1.35,
+    "cameraIdleZoom": 1,
+    "terrainTextureStrength": 1
+  },
+  "audio": {
+    "masterVolume": 0.6,
+    "enableSfx": false
+  },
+  "ui": {
+    "showNameSetupModal": true,
+    "wormNameMaxLength": 24
+  },
+  "store": {
+    "playStoreUrl": "",
+    "appStoreUrl": "",
+    "redirectAfterClicks": -1,
+    "redirectAfterClickDelayMs": -1
+  },
+  "tooltips": {
+    "gameplay": {
+      "rules": {
+        "world": {
+          "width": "Largeur du monde de jeu en pixels.",
+          "height": "Hauteur du monde de jeu en pixels.",
+          "fixedTimeStepMs": "Pas de simulation fixe en millisecondes."
+        },
+        "terrain": {
+          "columnWidth": "Taille des cellules terrain en pixels.",
+          "minGroundY": "Hauteur mini du sol de base.",
+          "maxGroundY": "Hauteur maxi du sol de base.",
+          "roughness": "Intensite globale des variations de terrain.",
+          "seed": "Seed procedural de reference.",
+          "randomizeSeedOnLoad": "Si true, melange la seed au chargement.",
+          "generation": {
+            "waves": "Couches de vagues utilisees dans la generation du relief.",
+            "rollingNoise": "Parametres de bruit cumulatif.",
+            "smoothing": "Lissage applique au profil du sol.",
+            "features": "Densite des montagnes, plateformes, caves et tunnels.",
+            "layers": "Epaisseur visuelle des couches de materiaux."
+          }
+        },
+        "turn": {
+          "durationMs": "Duree max du tour en phase d'action.",
+          "postShotDelayMs": "Delai entre fin du tir et tour suivant."
+        },
+        "physics": {
+          "gravityY": "Gravite verticale du monde.",
+          "wormRadius": "Rayon de collision des worms.",
+          "movementImpulse": "Reserve historique, garder pour compat.",
+          "maxMoveSpeed": "Vitesse horizontale max d'un worm.",
+          "jumpImpulse": "Impulse verticale du saut.",
+          "jumpForwardSpeed": "Vitesse horizontale du saut avant.",
+          "backJumpSpeed": "Vitesse horizontale du back-jump.",
+          "backJumpImpulse": "Impulse verticale du back-jump."
+        },
+        "wind": {
+          "minForce": "Force de vent minimale par tour.",
+          "maxForce": "Force de vent maximale par tour."
+        },
+        "water": {
+          "levelY": "Niveau de l'eau mortelle."
+        },
+        "match": {
+          "wormsPerTeam": "Nombre de worms jouables par equipe.",
+          "spawnPaddingX": "Marge horizontale interdite pour les spawns.",
+          "maxDurationMs": "Temps total max du match avant departage aux PV restants. -1 desactive."
+        }
+      },
+      "teams": "Definition des equipes, couleurs, controle et noms.",
+      "weapons": "Catalogue des armes disponibles avec projectile/explosion."
+    },
+    "visuals": {
+      "cameraAimingZoom": "Zoom camera en phase d'aiming.",
+      "cameraIdleZoom": "Zoom camera quand aucun worm n'est vise.",
+      "terrainTextureStrength": "Intensite visuelle des textures terrain."
+    },
+    "audio": {
+      "masterVolume": "Volume global de sortie audio.",
+      "enableSfx": "Active les effets sonores si des assets existent."
+    },
+    "ui": {
+      "showNameSetupModal": "Affiche la modale de setup avant le match.",
+      "wormNameMaxLength": "Longueur maximale d'un nom de worm."
+    },
+    "store": {
+      "playStoreUrl": "URL Android ouverte apres conditions de redirection.",
+      "appStoreUrl": "URL iOS ouverte apres conditions de redirection.",
+      "redirectAfterClicks": "Nombre de clics avant redirection auto. -1 desactive.",
+      "redirectAfterClickDelayMs": "Timer de redirection arme par clic. -1 desactive."
+    }
+  },
+  "default": {
+    "gameplay": {
+      "rules": {
+        "world": {
+          "width": 1600,
+          "height": 900,
+          "fixedTimeStepMs": 16.6667
+        },
+        "terrain": {
+          "columnWidth": 6,
+          "minGroundY": 420,
+          "maxGroundY": 680,
+          "roughness": 56,
+          "seed": 1337,
+          "randomizeSeedOnLoad": true,
+          "generation": {
+            "waves": [
+              { "frequency": 2.1, "amplitude": 0.72 },
+              { "frequency": 5.7, "amplitude": 0.34 },
+              { "frequency": 11.4, "amplitude": 0.17 },
+              { "frequency": 18.6, "amplitude": 0.09 }
+            ],
+            "rollingNoise": {
+              "damping": 0.8,
+              "injection": 0.2,
+              "amplitude": 1.18
+            },
+            "smoothing": {
+              "iterations": 4,
+              "centerWeight": 0.56,
+              "neighborWeight": 0.22
+            },
+            "features": {
+              "mountainCount": 8,
+              "mountainHeightMin": 9,
+              "mountainHeightMax": 30,
+              "mountainRadiusMin": 8,
+              "mountainRadiusMax": 34,
+              "plateauCount": 5,
+              "plateauWidthMin": 14,
+              "plateauWidthMax": 44,
+              "plateauThicknessMin": 3,
+              "plateauThicknessMax": 8,
+              "plateauMinYRatio": 0.22,
+              "plateauMaxYRatio": 0.68,
+              "caveCount": 15,
+              "caveRadiusMin": 4,
+              "caveRadiusMax": 14,
+              "tunnelCount": 7,
+              "tunnelRadiusMin": 2,
+              "tunnelRadiusMax": 5,
+              "playablePlatformMinCount": 2,
+              "playablePlatformMaxCount": 3,
+              "playablePlatformMinWidth": 14,
+              "playablePlatformMaxWidth": 20,
+              "playablePlatformMinThickness": 3,
+              "playablePlatformMaxThickness": 5,
+              "playablePlatformMinYRatio": 0.3,
+              "playablePlatformMaxYRatio": 0.62,
+              "playablePlatformFlatTolerance": 2,
+              "playablePlatformHeadroom": 5
+            },
+            "layers": {
+              "topsoilDepth": 2,
+              "dirtDepth": 11,
+              "bedrockDepth": 3
+            }
+          }
+        },
+        "turn": {
+          "durationMs": 20000,
+          "postShotDelayMs": 1200
+        },
+        "physics": {
+          "gravityY": 820,
+          "wormRadius": 16,
+          "movementImpulse": 22,
+          "maxMoveSpeed": 145,
+          "jumpImpulse": 310,
+          "jumpForwardSpeed": 170,
+          "backJumpSpeed": 96,
+          "backJumpImpulse": 390
+        },
+        "wind": {
+          "minForce": -170,
+          "maxForce": 170
+        },
+        "water": {
+          "levelY": 760
+        },
+        "match": {
+          "wormsPerTeam": 3,
+          "spawnPaddingX": 130,
+          "maxDurationMs": 90000
+        }
+      },
+      "teams": [
+        {
+          "id": "red",
+          "name": "Red Regiment",
+          "color": "#ff6868",
+          "controller": "ai",
+          "worms": ["Ajax", "Brutus", "Cassius"]
+        },
+        {
+          "id": "blue",
+          "name": "Blue Brigade",
+          "color": "#71b0ff",
+          "controller": "ai",
+          "worms": ["Iris", "Nova", "Rook"]
+        }
+      ],
+      "weapons": [
+        {
+          "id": "bazooka",
+          "label": "Bazooka",
+          "projectile": {
+            "radius": 5,
+            "mass": 0.45,
+            "speed": 520,
+            "restitution": 0.05,
+            "fuseMs": 0,
+            "windMultiplier": 0.95,
+            "explodeOnImpact": true
+          },
+          "explosion": {
+            "radius": 92,
+            "craterRadius": 72,
+            "maxDamage": 58,
+            "knockback": 260
+          }
+        },
+        {
+          "id": "grenade",
+          "label": "Grenade",
+          "projectile": {
+            "radius": 7,
+            "mass": 0.68,
+            "speed": 420,
+            "restitution": 0.62,
+            "fuseMs": 2300,
+            "windMultiplier": 0.33,
+            "explodeOnImpact": false
+          },
+          "explosion": {
+            "radius": 108,
+            "craterRadius": 84,
+            "maxDamage": 74,
+            "knockback": 330
+          }
+        }
+      ]
+    },
+    "visuals": {
+      "cameraAimingZoom": 1.35,
+      "cameraIdleZoom": 1,
+      "terrainTextureStrength": 1
+    },
+    "audio": {
+      "masterVolume": 0.6,
+      "enableSfx": false
+    },
+    "ui": {
+      "showNameSetupModal": true,
+      "wormNameMaxLength": 24
+    },
+    "store": {
+      "playStoreUrl": "",
+      "appStoreUrl": "",
+      "redirectAfterClicks": -1,
+      "redirectAfterClickDelayMs": -1
+    },
+    "tooltips": {
+      "gameplay": {
+        "rules": {
+          "world": {
+            "width": "Largeur du monde de jeu en pixels.",
+            "height": "Hauteur du monde de jeu en pixels.",
+            "fixedTimeStepMs": "Pas de simulation fixe en millisecondes."
+          },
+          "terrain": {
+            "columnWidth": "Taille des cellules terrain en pixels.",
+            "minGroundY": "Hauteur mini du sol de base.",
+            "maxGroundY": "Hauteur maxi du sol de base.",
+            "roughness": "Intensite globale des variations de terrain.",
+            "seed": "Seed procedural de reference.",
+            "randomizeSeedOnLoad": "Si true, melange la seed au chargement.",
+            "generation": {
+              "waves": "Couches de vagues utilisees dans la generation du relief.",
+              "rollingNoise": "Parametres de bruit cumulatif.",
+              "smoothing": "Lissage applique au profil du sol.",
+              "features": "Densite des montagnes, plateformes, caves et tunnels.",
+              "layers": "Epaisseur visuelle des couches de materiaux."
+            }
+          },
+          "turn": {
+            "durationMs": "Duree max du tour en phase d'action.",
+            "postShotDelayMs": "Delai entre fin du tir et tour suivant."
+          },
+          "physics": {
+            "gravityY": "Gravite verticale du monde.",
+            "wormRadius": "Rayon de collision des worms.",
+            "movementImpulse": "Reserve historique, garder pour compat.",
+            "maxMoveSpeed": "Vitesse horizontale max d'un worm.",
+            "jumpImpulse": "Impulse verticale du saut.",
+            "jumpForwardSpeed": "Vitesse horizontale du saut avant.",
+            "backJumpSpeed": "Vitesse horizontale du back-jump.",
+            "backJumpImpulse": "Impulse verticale du back-jump."
+          },
+          "wind": {
+            "minForce": "Force de vent minimale par tour.",
+            "maxForce": "Force de vent maximale par tour."
+          },
+          "water": {
+            "levelY": "Niveau de l'eau mortelle."
+          },
+          "match": {
+            "wormsPerTeam": "Nombre de worms jouables par equipe.",
+            "spawnPaddingX": "Marge horizontale interdite pour les spawns.",
+            "maxDurationMs": "Temps total max du match avant departage aux PV restants. -1 desactive."
+          }
+        },
+        "teams": "Definition des equipes, couleurs, controle et noms.",
+        "weapons": "Catalogue des armes disponibles avec projectile/explosion."
+      },
+      "visuals": {
+        "cameraAimingZoom": "Zoom camera en phase d'aiming.",
+        "cameraIdleZoom": "Zoom camera quand aucun worm n'est vise.",
+        "terrainTextureStrength": "Intensite visuelle des textures terrain."
+      },
+      "audio": {
+        "masterVolume": "Volume global de sortie audio.",
+        "enableSfx": "Active les effets sonores si des assets existent."
+      },
+      "ui": {
+        "showNameSetupModal": "Affiche la modale de setup avant le match.",
+        "wormNameMaxLength": "Longueur maximale d'un nom de worm."
+      },
+      "store": {
+        "playStoreUrl": "URL Android ouverte apres conditions de redirection.",
+        "appStoreUrl": "URL iOS ouverte apres conditions de redirection.",
+        "redirectAfterClicks": "Nombre de clics avant redirection auto. -1 desactive.",
+        "redirectAfterClickDelayMs": "Timer de redirection arme par clic. -1 desactive."
+      }
+    }
+  }
+}
